@@ -1,0 +1,53 @@
+#  Install the mailx package to send emails from the shell script. On most Linux systems, you can install it using the package manager. For example, on Debian/Ubuntu:
+
+sudo apt-get install mailutils
+
+#!/bin/bash
+
+# Replace the variables with your Greenplum connection details
+DB_HOST="your_greenplum_host"
+DB_PORT="your_greenplum_port"
+DB_NAME="your_greenplum_database"
+DB_USER="your_greenplum_user"
+DB_PASSWORD="your_greenplum_password"
+
+# Email configuration
+RECIPIENT="your_email@example.com"
+EMAIL_SUBJECT="Greenplum Check Report"
+
+# Function to run gpcheckcat and gpperfmon and send email if there are errors
+run_gp_check_and_notify() {
+    # Run gpcheckcat to check catalog consistency
+    gpcheckcat -d $DB_NAME -h $DB_HOST -p $DB_PORT -U $DB_USER
+
+    # Check the exit status of gpcheckcat
+    if [ $? -ne 0 ]; then
+        # gpcheckcat found errors, send email notification
+        echo "gpcheckcat found errors in the Greenplum catalog" | mailx -s "$EMAIL_SUBJECT" $RECIPIENT
+    else
+        echo "gpcheckcat completed successfully, no catalog errors found"
+    fi
+
+    # Run gpperfmon (formerly gpperfcheck) to check system health
+    gpperfmon -d $DB_NAME -h $DB_HOST -p $DB_PORT -U $DB_USER
+
+    # Check the exit status of gpperfmon
+    if [ $? -ne 0 ]; then
+        # gpperfmon found errors, send email notification
+        echo "gpperfmon found errors in the Greenplum system health" | mailx -s "$EMAIL_SUBJECT" $RECIPIENT
+    else
+        echo "gpperfmon completed successfully, no system health errors found"
+    fi
+}
+
+# Run the function to perform the checks and send email notification if errors are found
+run_gp_check_and_notify
+
+______________________________________________________________________
+chmod +x gp_check_and_notify.sh
+_________________________________
+Crontab -e
+
+0 0 * * * /path/to/gp_check_and_notify.sh
+
+
