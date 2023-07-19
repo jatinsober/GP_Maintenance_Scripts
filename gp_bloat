@@ -1,0 +1,54 @@
+# To create a shell script that finds bloated tables in a Greenplum database, you can utilize the pgstattuple extension, which provides statistics about the physical size and bloat in database tables. Below is an example of a shell script to find bloated tables in a Greenplum database:
+
+# Install the pgstattuple extension if it's not already installed:
+
+# Connect to the Greenplum database as a superuser (or a user with superuser privileges)
+psql -h your_greenplum_host -p your_greenplum_port -U your_superuser -d your_database_name
+
+# Install the pgstattuple extension
+CREATE EXTENSION IF NOT EXISTS pgstattuple;
+
+#!/bin/bash
+
+# Replace the variables with your Greenplum connection details
+DB_HOST="your_greenplum_host"
+DB_PORT="your_greenplum_port"
+DB_NAME="your_greenplum_database"
+DB_USER="your_greenplum_user"
+DB_PASSWORD="your_greenplum_password"
+
+# Threshold for table bloat (in percentage)
+BLOAT_THRESHOLD=10
+
+# Function to find bloated tables in the Greenplum database
+find_bloated_tables() {
+    # Connect to the database and execute the query to find bloated tables
+    psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME << EOF
+SELECT schemaname || '.' || relname AS table_name,
+       pg_size_pretty(pg_total_relation_size(C.oid)) AS total_size,
+       pg_size_pretty(pg_table_size(C.oid)) AS table_size,
+       pg_size_pretty(pg_indexes_size(C.oid)) AS index_size,
+       bloat_ratio
+FROM (
+  SELECT C.oid,
+         CASE WHEN pg_total_relation_size(C.oid) > 0 THEN
+              (pg_total_relation_size(C.oid) - pg_table_size(C.oid)) * 100 / pg_total_relation_size(C.oid)
+         ELSE 0
+         END AS bloat_ratio
+  FROM pg_class C
+  LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
+  WHERE nspname NOT IN ('pg_catalog', 'information_schema')
+    AND relkind='r'
+) AS bloat
+JOIN pg_class C ON (C.oid = bloat.oid)
+WHERE bloat_ratio > $BLOAT_THRESHOLD
+ORDER BY bloat_ratio DESC;
+EOF
+}
+
+# Run the function to find bloated tables in the Greenplum database
+find_bloated_tables
+____________
+chmod +x find_bloated_tables.sh
+___________
+./find_bloated_tables.sh
