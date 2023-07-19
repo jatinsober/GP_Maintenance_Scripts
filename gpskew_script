@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Replace the variables with your Greenplum connection details
+DB_HOST="your_greenplum_host"
+DB_PORT="your_greenplum_port"
+DB_NAME="your_greenplum_database"
+DB_USER="your_greenplum_user"
+DB_PASSWORD="your_greenplum_password"
+TABLE_NAME="your_table_name"
+
+# Function to find skew in the Greenplum database table
+find_skew() {
+    # Connect to the database and execute the query to find skew
+    psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME << EOF
+SELECT gp_segment_id, COUNT(*) AS row_count
+FROM $TABLE_NAME
+GROUP BY gp_segment_id
+ORDER BY row_count DESC;
+EOF
+}
+
+# Run the function to find skew in the table
+find_skew
+
+______________________
+chmod +x find_skew.sh
+
+_____________
+./find_skew.sh
+
