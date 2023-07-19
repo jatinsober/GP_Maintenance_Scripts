@@ -1,0 +1,57 @@
+# Install the mailx package to send emails from the shell script. On most Linux systems, you can install it using the package manager. For example, on Debian/Ubuntu:
+
+sudo apt-get install mailutils
+
+# Create a backup script.
+
+#!/bin/bash
+
+# Replace the variables with your Greenplum connection details
+DB_HOST="your_greenplum_host"
+DB_PORT="your_greenplum_port"
+DB_NAME="your_greenplum_database"
+DB_USER="your_greenplum_user"
+DB_PASSWORD="your_greenplum_password"
+
+# Set the backup directory where the dump files will be stored
+BACKUP_DIR="/path/to/backup_directory"
+
+# Get the current date for the backup file name
+BACKUP_DATE=$(date +"%Y%m%d")
+
+# Function to perform the backup and send notification email
+perform_backup_and_notify() {
+    # Create the backup file name with the current date
+    BACKUP_FILE="$BACKUP_DIR/gpdb_${DB_NAME}_${BACKUP_DATE}.backup"
+
+    # Run gpcrondump to create the backup
+    gpcrondump -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -F p -f $BACKUP_FILE
+
+
+    # Check if the backup was successful
+    if [ $? -eq 0 ]; then
+        email_subject="Greenplum Backup Success"
+        email_message="Automated Greenplum backup completed successfully. Backup saved to: $BACKUP_FILE"
+    else
+        email_subject="Greenplum Backup Failure"
+        email_message="Error: Automated Greenplum backup failed."
+    fi
+
+    # Send email notification
+    echo "$email_message" | mailx -s "$email_subject" your_email@example.com
+}
+
+# Run the function to perform the backup and send email notification
+perform_backup_and_notify
+
+
+# Save the above script to a file with a .sh extension, e.g., backup_notification.sh, and make it executable using the following command:
+chmod +x backup_notification.sh
+
+# Set up a cron job to run the script at your desired interval. Open your crontab file using the command:
+crontab -e 
+
+# Add the following line to the crontab file to run the script, for example, daily at midnight:
+0 0 * * * /path/to/backup_notification.sh
+
+
