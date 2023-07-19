@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Replace the variables with your database connection details
+DB_HOST="your_database_host"
+DB_PORT="your_database_port"
+DB_NAME="your_database_name"
+DB_USER="your_database_user"
+DB_PASSWORD="your_database_password"
+
+# Function to run auto vacuum
+run_auto_vacuum() {
+    # Connect to the database and execute auto vacuum
+    psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "VACUUM ANALYZE;"
+}
+
+# Run auto vacuum
+run_auto_vacuum
+
+# Save the above script to a file with a .sh extension, e.g., run_auto_vacuum.sh, and make it executable using the following command:
+chmod +x run_auto_vacuum.sh
+
+# To execute the script and run auto vacuum, simply run the script using:
+./run_auto_vacuum.sh
