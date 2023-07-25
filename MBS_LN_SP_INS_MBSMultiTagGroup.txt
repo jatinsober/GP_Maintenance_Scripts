@@ -1,0 +1,134 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION MBS_LN_SP_INS_MBSMultiTagGroup() returns void as $$
+
+declare 
+	X_nAccount_key	integer;
+	X_nAccountID			numeric (9) ;
+	X_NMultiTag_key		integer;
+	X_NPlacementTag		varchar(4);
+	X_start				timestamp;
+	X_stop 				timestamp;
+	X_printline 			char (50);
+	X_maxkey			integer;
+	X_rowcount			integer;
+	X_Recordcount			integer;
+	X_Membercount			integer;
+	X_varcount			integer;
+	X_Exists			integer;
+	X_NGroup_key			integer;
+	X_NRecorddt			timestamp;
+	X_NMember			Numeric (2);
+	X_NGroup			Numeric(2);
+	X_NsubMember			Numeric(2);
+	X_NWeightFactor			Numeric (4,2);	
+
+BEGIN
+
+create temp table MultiTagMember_csr
+				as Select distinct PlacementTag 
+				From MBS_Loans.LK_MBSMultiTag_key
+				Where AccountID = X_NAccountID
+				Order by PlacementTag;
+
+	create temp table MBSMultiTagGroup_Csr AS
+	select distinct AccountID		
+	from MBS_Loans.LK_MBSMultiTagGroup_key
+	order by AccountID;
+create temp table MultiTagMemberGroup_csr 
+						AS Select MultiTag_key
+						From MBS_Loans.LK_MBSMultiTag_key
+						Where AccountID = X_NAccountID
+						And PlacementTag = X_NPlacementTag
+						Order by MultiTag_key;
+
+X_maxkey := max(I_key) from MBS_Loans.LK_MBSMultiTagGroup_key;
+X_rowcount := 1;
+X_NRecordDt := CurrentLoadDt From DBScrub.TB_MBSLoadDt;
+
+while (X_rowcount <= X_maxkey) LOOP
+begin -- while (X_RecordCount <= X_maxkey)
+
+	X_nAccountID := * from  MBSMultiTagGroup_Csr ;	
+
+--	while (X_X_fetch_status <> -1) Loop
+	
+
+		X_NMember :=  Count(*) From MBS_Loans.LK_MBSMultiTag_key
+					Where AccountID = X_nAccountID;	
+					
+		X_NGroup :=  Count(Distinct PlacementTag) From MBS_Loans.LK_MBSMultiTag_key
+					Where AccountID = X_nAccountID;
+
+			 
+			If (Select Max(MultiTagGroup) from MBS_Loans.TB_MBSMultiTagGroup) IS Null then
+				X_NGroup_key := 1;
+			Else 
+create temp table tt1 as select Max(MultiTagGroup) TG from MBS_Loans.TB_MBSMultiTagGroup;
+				X_NGroup_key :=   TG + 1 from tt1;
+end if;
+end;
+end loop;
+
+
+		X_RecordCount := 1;
+
+		while (X_RecordCount <= X_NMember) loop
+		begin 
+						
+
+			X_NPlacementTag := * from MultiTagMember_csr ;
+
+			-- while (X_X_fetch_status <> -1) loop
+			begin -- while (X_X_fetch_status <> -1)
+				X_MemberCount := 1;
+
+				X_NSubMember :=  Count(*) From MBS_Loans.LK_MBSMultiTag_key
+							Where AccountID = X_nAccountID and PlacementTag = X_NPlacementTag;	end;
+end;
+end loop;
+
+				while (X_MemberCount <= X_NSubMember) loop
+				begin  --while (X_MemberCount <= X_NSubMember)
+					
+				
+					X_NMultiTag_key := * from MultiTagMemberGroup_csr ;
+
+
+					--while (X_X_fetch_status <> -1) loop
+					 -- while (X_X_fetch_status <> -1)
+
+						X_varcount :=  count(*) from MBS_Loans.TB_MBSMultiTagGroup
+							where  MultiTagGroup = X_NGroup_key And  MultiTag_key = X_NMultiTag_key;
+
+						if X_varcount < 1 Then
+						begin	
+
+							Insert into MBS_Loans.TB_MBSMultiTagGroup values (X_NGroup_key, X_NMultiTag_key, ((1.0/X_NSubMember) * (1.0/X_NGroup)), X_NRecordDt, X_NAccountID);
+						End;
+end if;
+						X_NMultiTag_key := * from MultiTagMemberGroup_csr ;
+end;
+end loop;
+				X_MemberCount := (X_MemberCount + 1);
+
+				X_NPlacementTag := * from MultiTagMember_csr ;
+			--End; -- while (X_X_fetch_status <> -1)
+		X_RecordCount := (X_RecordCount + 1);
+		--End;  --	while (X_RecordCount <= X_NMember)
+
+		X_nAccountID := * from MBSMultiTagGroup_Csr ;		
+	X_rowcount = X_MaxKey + 1;
+
+
+end; -- while (X_RecordCount <= X_maxkey)
+$$
+Language plpgsql;
+
+

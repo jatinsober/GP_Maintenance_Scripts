@@ -1,0 +1,125 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 5/JAN/2012
+-- Desc: Intial Conversion
+--
+-- Dev: Jitendra Lodwal
+-- Date: 27/MARCH/2012
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE  OR REPLACE FUNCTION MBS_LN_SP_INS_MBSApplCollateralGroup () RETURNS VOID AS $$
+
+DECLARE X_nAccount_key  int ;
+  X_nAccountID  numeric (9); 
+  X_nAccountNo  varchar (13) ;
+  X_NCollateral_key  int;
+  X_NCollateralType  varchar(2);
+  X_start  TIMESTAMP;
+  X_stop   TIMESTAMP;
+  X_printline   char (50);
+  X_maxkey  int;
+  X_rowcount  int;
+  X_Recordcount  int;
+  X_Membercount  int;
+  X_varcount  int;
+  X_Exists  int;
+  X_NGroup_key  int;
+  X_NMember  Numeric (2);
+  X_NGroup  Numeric(2);
+  X_NsubMember  Numeric(2);
+  X_NWeightFactor  Numeric (4,2)  ;
+  X_NRecordDt  TIMESTAMP;
+
+BEGIN
+X_start := * from now();
+--select now() as StartTime;
+X_maxkey :=  MAX(ApplCollat_key) FROM DBScrub.TB_MBSApplCollateral;
+X_rowcount := 1;
+
+SELECT CurrentLoadDt as recorddt into X_NRecordDt FROM DBScrub.TB_MBSLoadDt;
+
+CREATE TEMP TABLE  MBSApplCollatGrp_Csr_temp 
+AS SELECT DISTINCT AccountID  
+FROM DBScrub.TB_MBSApplCollateral
+WHERE CollateralID IN (SELECT CollateralID FROM MBS_Loans.lk_MBSApplCollateral_key) 
+GROUP BY AccountID
+ORDER BY AccountID;
+
+SELECT * into X_nAccountID FROM MBSApplCollatGrp_Csr_temp;  
+
+CREATE TEMP TABLE ApplCollateralMember_csr_TEMP AS SELECT DISTINCT CollateralType 
+FROM Dbscrub.TB_MBSApplCollateral a
+WHERE a.AccountID = X_nAccountID
+ORDER BY a.CollateralType;
+
+SELECT * into X_NCollateralType FROM ApplCollateralMember_csr_TEMP;
+
+CREATE TEMP TABLE ApplCollatMbrGrp_csr_TEMP AS SELECT Collateral_key
+FROM MBS_Loans.lk_MBSApplCollateral_key
+WHERE CollateralID IN (SELECT DISTINCT CollateralID FROM DBScrub.TB_MBSApplCollateral x
+WHERE x.AccountId = X_nAccountID AND x.CollateralType = X_NCollateralType)
+ORDER BY Collateral_key;
+
+SELECT * into X_NCollateral_key FROM ApplCollatMbrGrp_csr_TEMP;
+
+WHILE (X_rowcount <= X_maxkey) LOOP
+
+ SELECT COUNT(*) as member into X_NMember FROM DBScrub.TB_MBSApplCollateral a
+ WHERE a.AccountID = X_nAccountID;  
+ SELECT COUNT(DISTINCT CollateralType) as group into X_NGroup FROM DBScrub.TB_MBSApplCollateral a
+ WHERE a.AccountID = X_nAccountID;
+
+IF (SELECT MAX(CollateralGroup) FROM MBS_Loans.TB_MBSApplicationCollateralGroup) IS Null THEN
+X_NGroup_key := 1;
+ELSE 
+SELECT MAX(CollateralGroup) + 1 as Group_key into X_NGroup_key  FROM MBS_Loans.TB_MBSApplicationCollateralGroup;
+end if;
+
+SELECT *  INTO X_NCollateralType FROM ApplCollateralMember_csr_TEMP;
+
+--WHILE (X_X_fetch_status <> -1)
+X_MemberCount := 1;
+
+SELECT COUNT(*) as SubMember into X_NSubMember FROM DBScrub.TB_MBSApplCollateral a
+WHERE a.AccountID = X_nAccountID AND a.CollateralType = X_NCollateralType;
+
+WHILE (X_MemberCount <= X_NSubMember) LOOP
+  
+select *  INTO X_NCollateral_key  FROM ApplCollatMbrGrp_csr_TEMP;
+
+SELECT COUNT(*) into X_varcount  FROM MBS_Loans.TB_MBSApplicationCollateralGroup a
+WHERE a.CollateralGroup = X_NGroup_key AND a.Collateral_key = X_NCollateral_key;
+
+ -- SELECT X_NMember, X_NGroup, X_Exists, X_NGroup_key, X_NSubmember, X_NCollateral_key, X_varcount;
+
+IF X_varcount < 1 THEN
+  
+ -- INSERT into MBS_Loans.TB_MBSApplicationCollateralGroup VALUES (X_NGroup_key.group_key, 
+ -- X_NCollateral_key.collateral_key, ((1.0/X_NSubMember.submember) * (1.0/X_NGroup.group)), X_NRecordDt, X_NAccountID);
+ 
+INSERT into MBS_Loans.TB_MBSApplicationCollateralGroup_dummy VALUES( X_NGroup_key, 
+X_NCollateral_key, ((1.0/X_NSubMember) * (1.0/X_NGroup)), X_NRecordDt, X_NAccountID );
+ 
+--INSERT into MBS_Loans.TB_MBSApplicationCollateralGroup_dummy VALUES( X_NGroup_key, 
+--X_NCollateral_key, (X_NSubMember) * (X_NGroup) ,X_NRecordDt, X_NAccountID );
+
+X_MemberCount := (X_MemberCount + 1);
+    
+select * FROM MBSApplCollatGrp_Csr_temp INTO X_nAccountID;  
+end if;
+END LOOP;
+END LOOP;
+X_rowcount := X_Maxkey + 1;
+
+END ;
+$$
+LANGUAGE PLPGSQL;
+
+--X_stop := now();
+--SELECT now() as  'EndTime :' ;
+--SELECT DATEDIFF_2(hh, X_start, X_stop) as 'numeric of Hour';
+--SELECT  DATEDIFF(mi, X_start, X_stop) as 'numeric of Minutes';
+--SELECT  DATEDIFF(ss, X_start, X_stop) as 'numeric of Seconds';

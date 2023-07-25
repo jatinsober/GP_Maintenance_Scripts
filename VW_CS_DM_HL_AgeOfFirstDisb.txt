@@ -1,0 +1,11 @@
+
+CREATE or replace VIEW mbs_loans.VW_CS_DM_HL_AgeOfFirstDisb
+AS
+SELECT    mbs_loans.TB_CS_DM_PIF_TMP.TimeKey, mbs_loans.TB_MBSTime.TheDate, mbs_loans.TB_CS_DM_PIF_TMP.AccountNo, 
+                      mbs_loans.TB_CS_DM_PIF_TMP.FirstUtiDisbDt, DATEDIFF_2('month', mbs_loans.TB_CS_DM_PIF_TMP.FirstUtiDisbDt, mbs_loans.TB_MBSTime.TheDate) AS AgeOfFirstDisb
+FROM         mbs_loans.TB_CS_DM_PIF_TMP INNER JOIN
+                      mbs_loans.TB_MBSTime ON mbs_loans.TB_CS_DM_PIF_TMP.TimeKey = mbs_loans.TB_MBSTime.Time_key
+WHERE     (mbs_loans.TB_CS_DM_PIF_TMP.TimeKey =
+                          (SELECT     b.Time_key
+                            FROM          DBScrub.TB_CS_DM_LoadDt a INNER JOIN
+                                                   TB_MBSTime b ON a.CurrentLoadDt = b.TheDate));

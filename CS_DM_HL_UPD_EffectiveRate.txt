@@ -1,0 +1,88 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION CS_DM_HL_UPD_EffectiveRate() RETURNS VOID AS $$
+
+declare 
+      X_SemProdTyp varchar(2);
+     X_IntSpreadValue decimal (7,4);
+      X_PrtyCapInd varchar (1);
+      X_Prodcompcode varchar(4); 
+      X_BaseName varchar(7);
+      X_InterestType varchar(2);
+      X_InterestSpreadType varchar (4);
+      X_BaseRate decimal (7,4);
+      X_EffectiveRate decimal (7,4);
+      X_LoadDtKey INTEGER;
+counter numeric;
+BEGIN
+ X_EffectiveRate = 0;
+
+  X_LoadDtKey :=  b.Time_key
+		   FROM  DBScrub.TB_CS_DM_LoadDt a INNER JOIN
+                      TB_MBSTime b ON a.CurrentLoadDt = b.TheDate;
+
+create temp table tblcursor1_temp AS 	
+	SELECT   SEMProdTyp, ProdCompCode, PrtyCapInd, IntSpreadValue
+	FROM         mbs_loans.TB_CS_DM_PIF_TMP
+	WHERE     (TimeKey = X_LoadDtKey) And (EffectiveRate = 0)
+	GROUP BY SEMProdTyp, IntSpreadValue, PrtyCapInd, ProdCompCode
+	HAVING    SEMProdTyp IN ('HL','HP', 'PL', 'AM', '99') ;
+
+X_SemProdTyp := SemProdTyp FROM tblcursor1_temp;
+X_Prodcompcode := Prodcompcode  FROM  tblcursor1_temp;
+X_PrtyCapInd := PrtyCapInd  FROM  tblcursor1_temp;
+ X_IntSpreadValue := IntSpreadValue FROM  tblcursor1_temp;
+
+counter := count(*) from tblcursor1_temp;
+
+	IF counter = 0 THEN
+	begin		
+		if X_PrtyCapInd = 'Y' THEN
+		begin
+		X_BaseRate := CurBaseRate from VW_CS_DM_Get_CurBaseRate_Max_PRTY
+					where 	ProductComponentCd = X_Prodcompcode;  
+				
+				X_EffectiveRate := X_BaseRate +  X_IntSpreadValue;
+	
+
+			update TB_CS_DM_PIF_TMP
+			set EffectiveRate = X_EffectiveRate * 100
+			where TimeKey = X_LoadDtKey and
+				SEMProdTyp = X_SemProdtyp and
+				ProdCompCode = X_Prodcompcode and
+				PrtyCapInd = X_PrtyCapInd and
+				IntSpreadValue = X_IntSpreadValue;
+		end;
+	END IF;		
+if X_PrtyCapInd = 'N' THEN
+		begin
+			X_BaseRate := CurBaseRate from VW_CS_DM_Get_CurBaseRate_Max_PROD
+					where 	ProductComponentCd = X_Prodcompcode;
+			
+				 X_EffectiveRate := X_BaseRate +  X_IntSpreadValue;
+
+				update TB_CS_DM_PIF_TMP
+				set EffectiveRate = X_EffectiveRate * 100 
+				where TimeKey = X_LoadDtKey and
+				SEMProdTyp = X_SemProdtyp and
+				ProdCompCode = X_Prodcompcode and				PrtyCapInd = X_PrtyCapInd and
+				IntSpreadValue = X_IntSpreadValue	;		
+
+		end;					
+	END IF;
+		X_EffectiveRate = 0;
+	
+	--fetch  tblcursor1 into X_SemProdTyp, X_Prodcompcode, X_PrtyCapInd, X_IntSpreadValue;
+	end;
+	
+END IF;
+--close tblcursor1;	
+END;
+$$
+LANGUAGE PLPGSQL;

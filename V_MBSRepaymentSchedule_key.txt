@@ -1,0 +1,16 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 22/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SEARCH_PATH TO MBS_LOANS;
+
+CREATE VIEW mbs_loans.V_MBSRepaymentSchedule_key
+AS
+SELECT DISTINCT mbs_loans.LK_MBSRepaymentSchedule_key.AccountID, mbs_loans.TB_MBSCustomer.AccountNo, MIN(mbs_loans.LK_MBSRepaymentSchedule_key.SchdDueDt) AS FirstInstallmentDt
+FROM         mbs_loans.LK_MBSRepaymentSchedule_key INNER JOIN mbs_loans.TB_MBSCustomer ON mbs_loans.LK_MBSRepaymentSchedule_key.AccountID = mbs_loans.TB_MBSCustomer.AccountID
+WHERE     (mbs_loans.LK_MBSRepaymentSchedule_key.InstNo = 1)
+GROUP BY mbs_loans.LK_MBSRepaymentSchedule_key.AccountID, mbs_loans.TB_MBSCustomer.AccountNo;
+
+alter table mbs_loans.V_MBSRepaymentSchedule_key owner to mbs_loans;

@@ -1,0 +1,14 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE or replace VIEW mbs_loans.VW_CS_DM_Get_CurBaseRate
+AS
+SELECT     BaseName, InterestType, InterestSpreadType, ProductComponentCd, CurBaseRate, LastUpdateFlag, UpdateDateTime
+FROM         mbs_loans.TB_MBSProductInterestRate
+WHERE     (BaseName = 'BLR') AND (InterestType = 'DR') AND (InterestSpreadType = 'PRTY') AND (LastUpdateFlag = 1)
+ORDER BY ProductComponentCd;

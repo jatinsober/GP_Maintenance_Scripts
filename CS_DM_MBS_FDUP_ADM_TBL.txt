@@ -1,0 +1,298 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 5/JAN/2012
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+create OR replace FUNCTION CS_DM_MBS_FDUP_ADM_TBL() RETURNS VOID AS $$
+
+DECLARE
+X_PeriodOfUpdate	TIMESTAMP;
+X_dtCurrentDt  TIMESTAMP;
+
+BEGIN
+X_PeriodOfUpdate :=CurrentLoadDt FROM DBScrub.TB_CS_DM_LoadDt;
+X_dtCurrentDt :=X_PeriodOfUpdate;
+
+
+--truncate all tmp table
+truncate table TB_CS_DM_PIF_TMP_ADM_STOL1;
+truncate table TB_CS_DM_PIF_TMP_ADM_STOL;
+truncate table TB_CS_DM_PIF_TMP_ADM_DECE1;
+truncate table TB_CS_DM_PIF_TMP_ADM_DECE;
+truncate table TB_CS_DM_PIF_TMP_ADM_FRAU1;
+truncate table TB_CS_DM_PIF_TMP_ADM_FRAU;
+truncate table TB_CS_DM_PIF_TMP_ADM_BKTCY1;
+truncate table TB_CS_DM_PIF_TMP_ADM_BKTCY;
+truncate table TB_CS_DM_PIF_TMP_ADM_WOFF1;
+truncate table TB_CS_DM_PIF_TMP_ADM_WOFF;
+truncate table TB_CS_DM_PIF_TMP_ADM_NPLF1;
+truncate table TB_CS_DM_PIF_TMP_ADM_NPLF;
+truncate table TB_CS_DM_PIF_TMP_ADM_RSRC1;
+truncate table TB_CS_DM_PIF_TMP_ADM_RSRC;
+truncate table TB_CS_DM_PIF_TMP_ADM_RCRSTAG;
+truncate table TB_CS_DM_PIF_TMP_ADM_RCRSTAG1;
+truncate table TB_CS_DM_PIF_TMP_ADM_FINAL;
+truncate table TB_CS_DM_PIF_TMP_ADM_FINAL2;
+
+--Start insert data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_STOL', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_STOL1
+(ACCT_NO, STOLEN_VEH_UDR_INS_CLAIM_HP)
+SELECT     AgreementNo, MAX(StolenVehicleUnderInsClaimHPTmp) AS STOLEN
+FROM          TB_CS_DM_PIF_TMP_ADM2
+WHERE     (ProductGroup <> '06')
+GROUP BY AgreementNo;
+
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_STOL
+SELECT a.*
+FROM  mbs_loans.TB_CS_DM_PIF_TMP_ADM2 a, mbs_loans.TB_CS_DM_PIF_TMP_ADM_STOL1 b
+WHERE a.AgreementNo = b.ACCT_NO AND 
+      a.StolenVehicleUnderInsClaimHPTmp = b.STOLEN_VEH_UDR_INS_CLAIM_HP;
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_STOL', now());
+
+
+--Start insert data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_DECE', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_DECE1
+(ACCT_NO, DECEASED_FLAG)
+SELECT     AgreementNo, MAX(DeceasedFlg) AS DECE
+FROM         TB_CS_DM_PIF_TMP_ADM_STOL
+GROUP BY AgreementNo;
+
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_DECE
+SELECT a.*
+FROM  TB_CS_DM_PIF_TMP_ADM_STOL a, mbs_loans.TB_CS_DM_PIF_TMP_ADM_DECE1 b
+WHERE a.AgreementNo = b.ACCT_NO AND 
+      a.DeceasedFlg = b.DECEASED_FLAG      ;
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_DECE', now());
+
+
+--Start insert data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_FRAU', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_FRAU1
+(ACCT_NO, FRAUD_ACCT_FLAG_ALL)
+SELECT     AgreementNo, MAX(FraudAccFlgAll) AS FRAU
+FROM         TB_CS_DM_PIF_TMP_ADM_DECE
+--WHERE     (ProductGroup <> '06')
+GROUP BY AgreementNo;
+
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_FRAU
+SELECT a.*
+FROM  mbs_loans.TB_CS_DM_PIF_TMP_ADM_DECE a, mbs_loans.TB_CS_DM_PIF_TMP_ADM_FRAU1 b
+WHERE a.AgreementNo = b.ACCT_NO AND 
+      a.FraudAccFlgAll = b.FRAUD_ACCT_FLAG_ALL     ;
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_FRAU', now());
+
+
+--Start insert data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_BKTCY', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_BKTCY1
+(ACCT_NO, BANKRUPTCY)
+SELECT     AgreementNo, MAX(BANKRUPTCY) AS BKTCY
+FROM         TB_CS_DM_PIF_TMP_ADM_FRAU
+--WHERE     (ProductGroup <> '06')
+GROUP BY AgreementNo;
+
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_BKTCY
+SELECT a.*
+FROM  mbs_loans.TB_CS_DM_PIF_TMP_ADM_FRAU a, mbs_loans.TB_CS_DM_PIF_TMP_ADM_BKTCY1 b
+WHERE a.AgreementNo = b.ACCT_NO AND      a.BANKRUPTCY = b.BANKRUPTCY;     
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_BKTCY', now());
+
+
+--Start insert data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_WOFF', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_WOFF1
+(ACCT_NO, WRT_OFF_FLAG)
+SELECT     AgreementNo, MAX(WriteOffFlg) AS WOFF
+FROM         TB_CS_DM_PIF_TMP_ADM_BKTCY
+--WHERE     (ProductGroup <> '06')
+GROUP BY AgreementNo;
+
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_WOFF
+SELECT a.*
+FROM  mbs_loans.TB_CS_DM_PIF_TMP_ADM_BKTCY a, mbs_loans.TB_CS_DM_PIF_TMP_ADM_WOFF1 b
+WHERE a.AgreementNo = b.ACCT_NO AND 
+      a.WriteOffFlg = b.WRT_OFF_FLAG ;
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_WOFF', now());
+
+
+--Start insert data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_NPLF', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_NPLF1
+(ACCT_NO, NPL_FLAG)
+SELECT     AgreementNo, MAX(NPLFlg) AS NPL
+FROM         TB_CS_DM_PIF_TMP_ADM_WOFF
+--WHERE     (ProductGroup <> '06')
+GROUP BY AgreementNo;
+
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_NPLF
+SELECT a.*
+FROM  mbs_loans.TB_CS_DM_PIF_TMP_ADM_WOFF a, mbs_loans.TB_CS_DM_PIF_TMP_ADM_NPLF1 b
+WHERE a.AgreementNo = b.ACCT_NO AND 
+      a.NPLFlg = b.NPL_FLAG ;
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_NPLF', now());
+
+
+--Start insert data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_RCRSTAG', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_RCRSTAG1
+(ACCT_NO, RCRSTAG)
+SELECT     AgreementNo, MAX(RCRSTAG) AS RCRSTAG
+FROM         TB_CS_DM_PIF_TMP_ADM_NPLF
+--WHERE     (ProductGroup <> '06')
+GROUP BY AgreementNo;
+
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_RCRSTAG
+SELECT a.*
+FROM  mbs_loans.TB_CS_DM_PIF_TMP_ADM_NPLF a, mbs_loans.TB_CS_DM_PIF_TMP_ADM_RCRSTAG1 b
+WHERE a.AgreementNo = b.ACCT_NO AND 
+      a.RCRSTAG = b.RCRSTAG ;
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_RCRSTAG', now());
+
+
+--Start insert data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_RSRC', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_RSRC1
+(ACCT_NO, RS_RC_ACCT_FLAG)
+SELECT     AgreementNo, MAX(RestructuredAccFlg) AS RSRCFLG
+FROM         TB_CS_DM_PIF_TMP_ADM_RCRSTAG
+--WHERE     (ProductGroup <> '06')
+GROUP BY AgreementNo;
+
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_RSRC
+SELECT a.*
+FROM  mbs_loans.TB_CS_DM_PIF_TMP_ADM_RCRSTAG a, mbs_loans.TB_CS_DM_PIF_TMP_ADM_RSRC1 b
+WHERE a.AgreementNo = b.ACCT_NO AND 
+      a.RestructuredAccFlg = b.RS_RC_ACCT_FLAG ;
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_RSRC', now());
+
+
+--Start insert data (get distinct record with NULL TagExpiryDt)
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_NExpDt', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_NExpDt
+(ACCT_NO, TagExpiryDt)
+SELECT    DISTINCT AgreementNo, TagExpiryDt
+FROM         TB_CS_DM_PIF_TMP_ADM_RSRC
+WHERE    TagExpiryDt IS NULL ;
+
+--Start insert data (get record with Max TagExpiryDt)
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_MExpDt', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_MExpDt
+(ACCT_NO, TagExpiryDt)
+SELECT     AgreementNo AS Expr1, MAX(TagExpiryDt) AS MTagExpiryDt
+FROM         TB_CS_DM_PIF_TMP_ADM_RSRC
+WHERE     (TagExpiryDt IS NOT NULL)
+GROUP BY AgreementNo;
+
+--Start insert data (get record with latest TagExpiryDt where TagExpiryDt is not null)
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_LExpDt', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_LExpDt
+(ACCT_NO, TagExpiryDt)
+SELECT     TB_CS_DM_PIF_TMP_ADM_MExpDt.ACCT_NO, TB_CS_DM_PIF_TMP_ADM_MExpDt.TagExpiryDt
+FROM         TB_CS_DM_PIF_TMP_ADM_NExpDt RIGHT OUTER JOIN
+                     TB_CS_DM_PIF_TMP_ADM_MExpDt ON 
+                     TB_CS_DM_PIF_TMP_ADM_NExpDt.ACCT_NO =TB_CS_DM_PIF_TMP_ADM_MExpDt.ACCT_NO
+WHERE     (TB_CS_DM_PIF_TMP_ADM_NExpDt.ACCT_NO IS NULL);
+
+
+
+--Start distinct data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start distinct MBS data & insert into TB_CS_DM_PIF_TMP_ADM_FINAL', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_FINAL(AgreementNo, RecordType, SEMProdTyp, CusNo, Bal, LimitAmt, NGoodBadInd, NGoodBadFlg, GoodBadIndHP, GoodBadFlgHP, GoodBadIndHL, 
+                      GoodBadFlgHL, GoodBadIndCC, GoodBadFlgCC, StaffFlg, VIPFlg, CusStatus, NPLFlg, ProdType, ClosedDt, WriteOffFlg, WriteOffDt, AppDt, AgeOfAcct, 
+                      PeriodOfUpdate, MonthsInArrears, DelinquencyStatus, RestructuredAccFlg, WorstArrearsL12m, NoOfDelinquencyStatus2L12m, 
+                      NoOfDelinquencyStatus3L12m, ArrearsAmt, WorstMIAL3m, WorstMIAL6m, WorstMIAL9m, FraudAccFlgAll, FraudAccFlgCC, FraudAccFlgHP, 
+                      FraudAccFlgHL, AbadonProjFlgHL, StolenVehicleUnderInsClaimHP, StolenVehicleUnderInsClaimHPTmp, PIFSpareNumeric1, EGoodBadInd, 
+                      EffectiveRate, InterestInSupense, SpecificProvision, FirstUtiDisbDt, UtilisationAmt, WriteOffAmt, LoanMaturityDt, LockInPeriod, PIFSpareText1, 
+                      EGoodbadFlg, PIFSpareText3, PIFSpareText4, PIFSpareText5, PIFSpareText6, PIFSpareText7, PIFSpareText8, PIFSpareText9, PIFSpareText10, 
+                      DeceasedFlg, CCLostCardFlg, CCStolenCardFlg, FullDisbDt, DisbAmt, AgeOfFirstDisb, DateOfRecovery, RecoveryAmt, FeesIncufrmRecovery, 
+                      CashAdvanceAmt, SpareNumeric5, SpareNumeric6, SpareNumeric7, SpareNumeric8, SpareNumeric9, SpareNumeric10, SpareNumeric11, 
+                      SpareNumeric12, SpareNumeric13, SpareNumeric14, SpareNumeric15, SpareText1, SpareText2, SpareText3, SpareText4, SpareText5, SpareText6, 
+                      SpareText7, SpareText8, SpareText9, SpareText10, SpareText11, SpareText12, SpareText13, SpareText14, SpareText15, TagEffectiveDt, 
+                      CusStatusRank, TimeKey, ProductKey, StaticAcctNoKey, IntSpreadValue, PrtyCapInd, ProdCompCode, ProductGroup, Bankruptcy, RCRSTag)
+SELECT DISTINCT(AgreementNo) AS AgreementNo, RecordType, SEMProdTyp, CusNo, Bal, LimitAmt, NGoodBadInd, NGoodBadFlg, GoodBadIndHP, GoodBadFlgHP, GoodBadIndHL, 
+                      GoodBadFlgHL, GoodBadIndCC, GoodBadFlgCC, StaffFlg, VIPFlg, CusStatus, NPLFlg, ProdType, ClosedDt, WriteOffFlg, WriteOffDt, AppDt, AgeOfAcct, 
+                      PeriodOfUpdate, MonthsInArrears, DelinquencyStatus, RestructuredAccFlg, WorstArrearsL12m, NoOfDelinquencyStatus2L12m, 
+                      NoOfDelinquencyStatus3L12m, ArrearsAmt, WorstMIAL3m, WorstMIAL6m, WorstMIAL9m, FraudAccFlgAll, FraudAccFlgCC, FraudAccFlgHP, 
+                      FraudAccFlgHL, AbadonProjFlgHL, StolenVehicleUnderInsClaimHP, StolenVehicleUnderInsClaimHPTmp, PIFSpareNumeric1, EGoodBadInd, 
+                      EffectiveRate, InterestInSupense, SpecificProvision, FirstUtiDisbDt, UtilisationAmt, WriteOffAmt, LoanMaturityDt, LockInPeriod, PIFSpareText1, 
+                      EGoodbadFlg, PIFSpareText3, PIFSpareText4, PIFSpareText5, PIFSpareText6, PIFSpareText7, PIFSpareText8, PIFSpareText9, PIFSpareText10, 
+                      DeceasedFlg, CCLostCardFlg, CCStolenCardFlg, FullDisbDt, DisbAmt, AgeOfFirstDisb, DateOfRecovery, RecoveryAmt, FeesIncufrmRecovery, 
+                      CashAdvanceAmt, SpareNumeric5, SpareNumeric6, SpareNumeric7, SpareNumeric8, SpareNumeric9, SpareNumeric10, SpareNumeric11, 
+                      SpareNumeric12, SpareNumeric13, SpareNumeric14, SpareNumeric15, SpareText1, SpareText2, SpareText3, SpareText4, SpareText5, SpareText6, 
+                      SpareText7, SpareText8, SpareText9, SpareText10, SpareText11, SpareText12, SpareText13, SpareText14, SpareText15, TagEffectiveDt, 
+                      CusStatusRank, TimeKey, ProductKey, StaticAcctNoKey, IntSpreadValue, PrtyCapInd, ProdCompCode, ProductGroup, Bankruptcy, RCRSTag
+FROM TB_CS_DM_PIF_TMP_ADM_RSRC;
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End distinct MBS data & insert into TB_CS_DM_PIF_TMP_ADM_FINAL', now());
+
+---INSERT INTO FINAL2
+--Start insert data into FINAL2 (records with max TagExpiryDt)
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_FINAL2 insert Max TagExpiryDt', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_FINAL2
+SELECT a.*
+FROM  TB_CS_DM_PIF_TMP_ADM_FINAL a, TB_CS_DM_PIF_TMP_ADM_LExpDt b
+WHERE a.AgreementNo = b.ACCT_NO AND 
+      a.TagExpiryDt = b.TagExpiryDt;
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_FINAL2 insert Max TagExpiryDt', now());
+
+--Start insert data into FINAL2 (records with NULL TagExpiryDt)
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start TB_CS_DM_PIF_TMP_ADM_FINAL2 insert NULL TagExpiryDt', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_FINAL2
+SELECT     *
+FROM         TB_CS_DM_PIF_TMP_ADM_FINAL
+WHERE     (TagExpiryDt IS NULL);
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End TB_CS_DM_PIF_TMP_ADM_FINAL2 insert NULL TagExpiryDt', now());
+
+
+--Start insert LOC data into FINAL2
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start insert LOC data into TB_CS_DM_PIF_TMP_ADM_FINAL2', now());
+INSERT INTO TB_CS_DM_PIF_TMP_ADM_FINAL2
+SELECT * FROM    TB_CS_DM_PIF_TMP_ADM2
+WHERE     (ProductGroup = '06');
+--Start distinct data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End insert LOC data into TB_CS_DM_PIF_TMP_ADM_FINAL2', now());
+END;
+$$
+LANGUAGE PLPGSQL;

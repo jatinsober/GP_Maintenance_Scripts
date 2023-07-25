@@ -1,0 +1,161 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION MBS_LN_SP_INS_ThirdPartyGroup () returns void as $$
+
+declare X_nAccount_key	integer;
+	MBS3rdPartyGroup_csr			numeric (9) ;
+	X_nAccountNo			varchar (13) ;
+	X_NThirdParty_key		integer;
+	X_NThirdPartyType		varchar(2);
+	X_NThirdPartyContactPerson       varchar(25);
+--add in CorpInfo Enhancement
+	X_NCorrespondence_No	varchar(15);
+	X_start				timestamp;
+	X_stop 				timestamp;
+	X_printline 			char (50);
+	X_maxkey			integer;
+	X_rowcount			integer;
+	X_Recordcount			integer;
+	X_Membercount			integer;
+	X_varcount			integer;
+	X_Exists			integer;
+	X_NGroup_key			integer;
+	X_NRecorddt			timestamp;
+	X_NMember			Numeric (2);
+	X_NGroup			Numeric(2);
+	X_NsubMember			Numeric(2);
+	X_NWeightFactor		Numeric (4,2)	;
+--	MBS3rdPartyGroup_csr record;
+
+BEGIN
+
+X_start = NOW()as "StartTime :";
+
+X_maxkey := max(ThirdParty_key) from MBS_Loans.TB_MBS3rdParty;
+
+X_rowcount := 1;
+X_NRecordDt :=  CurrentLoadDt From DBScrub.TB_MBSLoadDt;
+
+while (X_rowcount <= X_maxkey) loop
+begin -- while (X_RecordCount <= X_maxkey)
+--	create temp table MBS3rdPartyGroup_csr AS
+	
+
+--	MBS3rdPartyGroup_csr := * from MBS3rdPartyGroup_csr;		
+  select distinct AccountID		
+             from MBS_Loans.TB_MBS3rdParty
+	order by AccountId into MBS3rdPartyGroup_csr;
+
+--MBS3rdPartyGroup_csr  := * from MBS3rdPartyGroup_csr;
+
+--	while (X_X_fetch_status <> -1)
+	begin
+                           X_NMember :=  Count(*) From MBS_Loans.TB_MBS3rdParty
+					Where AccountID = MBS3rdPartyGroup_csr;		
+
+                           X_NGroup := Count(Distinct ThirdPartyType) From MBS_Loans.TB_MBS3rdParty
+					Where AccountID = MBS3rdPartyGroup_csr;
+
+-- NBL Add in another colomn X_NThirdPartyContactPerson  ---
+		X_NThirdPartyContactPerson :=  ThirdPartyContactPerson From MBS_Loans.TB_MBS3rdParty
+					Where AccountID = MBS3rdPartyGroup_csr and ThirdPartyType = X_NThirdPartyType;	
+--AMS Add in  col X_NCorrespondence_No ---
+		X_NCorrespondence_No :=  Correspondence_No From MBS_Loans.TB_MBS3rdParty
+					Where AccountID = MBS3rdPartyGroup_csr and ThirdPartyType = X_NThirdPartyType;	
+		
+		Begin	 
+			If (Select Max(ThirdPartyGroup) from MBS_Loans.TB_MBSThirdPartyGroup) IS Null then
+				X_NGroup_key := 1;
+			Else 
+drop table t1;
+create temp table T1 as Select Max(ThirdPartyGroup) as M1 from MBS_Loans.TB_MBSThirdPartyGroup;
+				X_NGroup_key := M1 + 1 from T1;
+		End IF	;
+END;
+
+		X_RecordCount = 1;
+end;
+end;
+end loop;
+
+		while (X_RecordCount <= X_NMember) loop
+		begin 
+			create temp table ThirdPartyMember_csr  AS Select distinct ThirdPartyType
+				From MBS_Loans.TB_MBS3rdParty
+				Where AccountID = MBS3rdPartyGroup_csr
+				Order by ThirdPartyType;
+
+			--open ThirdPartyMember_csr
+
+			 X_NThirdPartyType := * from ThirdPartyMember_csr;
+
+		--	while (X_X_fetch_status <> -1)
+			begin -- while (X_X_fetch_status <> -1)
+				X_MemberCount := 1;
+
+				X_NSubMember :=  Count(*) From MBS_Loans.TB_MBS3rdParty
+							Where AccountID = MBS3rdPartyGroup_csr and ThirdPartyType = X_NThirdPartyType;	end;
+end;
+end loop;
+
+				while (X_MemberCount <= X_NSubMember) LOOP
+				begin  --while (X_MemberCount <= X_NSubMember)
+					create temp table ThirdPartyMemberGroup_csr AS Select ThirdParty_key
+						From MBS_Loans.TB_MBS3rdParty
+						Where AccountID = MBS3rdPartyGroup_csr
+						And ThirdPartyType = X_NThirdPartyType
+						Order by ThirdParty_key;
+	
+					
+
+					X_NThirdParty_key := * from ThirdPartyMemberGroup_csr ;
+
+				--	while (X_X_fetch_status <> -1)
+					begin -- while (X_X_fetch_status <> -1)
+
+						X_varcount :=  count(*) from MBS_Loans.TB_MBSThirdPartyGroup
+							where ThirdPartyGroup = X_NGroup_key And ThirdParty_key = X_NThirdParty_key;
+
+						if X_varcount < 1 then
+						begin	
+													Insert  into MBS_Loans.TB_MBSThirdPartyGroup values (X_NGroup_key, X_NThirdParty_key, ((1.0/X_NSubMember) * (1.0/X_NGroup)), X_NRecordDt, MBS3rdPartyGroup_csr, X_NThirdPartyContactPerson,X_NCorrespondence_No);
+
+						End; end if;
+						X_NThirdParty_key:= * from ThirdPartyMemberGroup_csr;
+	
+					 -- while (X_X_fetch_status <> -1)
+			
+				
+				X_MemberCount := (X_MemberCount + 1);
+				--while (X_MemberCount <= X_NSubMember)
+
+				X_NThirdPartyType := * from ThirdPartyMember_csr;
+		X_RecordCount := (X_RecordCount + 1);
+		 --	while (X_RecordCount <= X_NMember)
+
+
+		--MBS3rdPartyGroup_csr := * from MBS3rdPartyGroup_csr;		X_rowcount := (X_maxKey + 1);
+End; 
+End;
+end loop;
+
+ -- while (X_RecordCount <= X_maxkey)
+
+/* X_stop := now() as "end time";
+SELECT  extract(hour from X_start);
+SELECT  extract(minute from X_start);
+SELECT extract(second from X_start);
+SELECT extract(hour from X_stop);
+SELECT  extract(minute from X_stop);
+SELECT extract(second from X_stop);
+*/
+END;
+$$
+language plpgsql;
+

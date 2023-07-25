@@ -1,0 +1,72 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+
+CREATE OR REPLACE FUNCTION CS_DM_Bal (
+X_strAccNo       VARCHAR(20),
+X_dtCurrentDt    TIMESTAMP,
+X_intMths        NUMERIC,
+X_strCounter     VARCHAR(1),
+ OUT X_X_intBal        NUMERIC(18,2),
+ OUT X_X_intBalCounter INTEGER) RETURNS RECORD AS $$
+
+
+DECLARE X_X_intCount INTEGER;
+BEGIN
+IF X_strCounter='Y' THEN
+
+	SELECT 
+	MIN(a.BalancePrincipal +a.BalanceInterest+a.BalanceLPI+a.BalanceOtherCost1) AS intBal,
+	COUNT(*)  AS intBalCounter
+	FROM 
+	MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+	ON a.time_key=b.time_key AND b.weekofmonth=4
+	INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+	ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+	WHERE 
+	c.AccountNo=X_strAccNo AND
+	a.CurrentPIA_key =a.CurrentPIA_key AND
+	DATEDIFF_2('month',X_dtCurrentDt ,thedate )<=0 AND
+	DATEDIFF_2('month',X_dtCurrentDt ,thedate )> X_intMths
+	GROUP BY (a.BalancePrincipal +a.BalanceInterest+a.BalanceLPI+a.BalanceOtherCost1);
+	 
+	X_X_intCount := COUNT(*) 
+	FROM 
+	MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+	ON a.time_key=b.time_key AND b.weekofmonth=4
+	INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+	ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+	WHERE 
+	c.AccountNo=X_strAccNo AND
+	a.CurrentPIA_key =a.CurrentPIA_key AND
+	DATEDIFF_2('month',X_dtCurrentDt ,thedate )<=0 AND
+	DATEDIFF_2('month',X_dtCurrentDt ,thedate )> X_intMths;
+END IF;
+	--If the occurance is not match with number of records hence doesn't fulfil the requirement
+	IF X_X_intCount<>X_X_intBalCounter THEN
+	X_X_intBal := -9999999;
+
+ELSE IF X_strCounter='N' THEN
+	
+	X_X_intBal := MIN(a.BalancePrincipal +a.BalanceInterest+a.BalanceLPI+a.BalanceOtherCost1)
+	FROM 
+	MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+	ON a.time_key=b.time_key AND b.weekofmonth=4
+	INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+	ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+	WHERE 
+	c.AccountNo=X_strAccNo AND
+	a.CurrentPIA_key =a.CurrentPIA_key AND
+	DATEDIFF_2('month',X_dtCurrentDt ,thedate )<=0 AND
+	DATEDIFF_2('month',X_dtCurrentDt ,thedate )> X_intMths;
+END IF;
+END IF;
+
+END;
+$$
+Language plpgsql;

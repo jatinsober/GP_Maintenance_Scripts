@@ -1,0 +1,69 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+-- Dev: Jitendra Lodwal
+-- Date: 26/MARCH/2011
+-- Desc: Intial Conversion
+--
+-- Dev: Jitendra Lodwal
+-- Date: 27/MARCH/2011
+-- Desc: Intial Conversion
+--
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION CS_DM_Bal_MEP (X_dtCurrentDt   date) returns void as $$
+
+
+DECLARE X_X_intCount INTEGER;
+X_intBal        NUMERIC(18,2);
+X_intBalCounter INTEGER;
+
+BEGIN
+
+X_intBal := NULL;
+X_intBalCounter := NULL;
+
+--Truncate prev data
+TRUNCATE TABLE TB_CS_DM_Bal_MEP;
+
+INSERT INTO TB_CS_DM_Bal_MEP (AccountNo, intBalance, intBalCounter)
+SELECT c.AccountNo,
+MIN(a.BalancePrincipal +a.BalanceInterest+a.BalanceLPI+a.BalanceOtherCost1) as intBal,
+COUNT(*) as intBalCounter
+FROM MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+ON a.time_key=b.time_key AND b.weekofmonth=4 INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE a.CurrentPIA_key =a.CurrentPIA_key AND
+c.ProductGroup = '06' AND
+DATEDIFF_2('month', X_dtCurrentDt ,thedate )<=0 AND
+DATEDIFF_2('month', X_dtCurrentDt ,thedate )> -12
+GROUP BY c.AccountNo,(a.BalancePrincipal +a.BalanceInterest+a.BalanceLPI+a.BalanceOtherCost1),c.AccountNo;
+
+TRUNCATE TABLE mbs_loans.TB_CS_DM_TMP_intCounter;
+
+INSERT INTO TB_CS_DM_TMP_intCounter(AccountNo, tmpCounter)
+SELECT AccountNo, COUNT(*) as intCount 
+FROM MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+ON a.time_key=b.time_key AND b.weekofmonth=4 INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE a.CurrentPIA_key =a.CurrentPIA_key AND
+DATEDIFF_2('month', X_dtCurrentDt,thedate )<=0 AND
+DATEDIFF_2('month', X_dtCurrentDt,thedate )> -12
+GROUP BY AccountNo;
+
+UPDATE mbs_loans.TB_CS_DM_Bal_MEP  a
+SET intCounter = b.tmpCounter
+FROM TB_CS_DM_TMP_intCounter b
+WHERE a.AccountNo = b.AccountNo;
+
+UPDATE 	mbs_loans.TB_CS_DM_Bal_MEP
+SET intBalance = -9999999
+WHERE intBalCounter <> intCounter;
+
+END;
+$$
+Language plpgsql;
+
+

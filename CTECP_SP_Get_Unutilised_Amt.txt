@@ -1,0 +1,146 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+CREATE or replace FUNCTION CTECP_SP_Get_Unutilised_Amt()
+RETURNS VOID
+   AS $procedure$
+   DECLARE
+   v_acctid  NUMERIC(9,0);
+   v_acctno  VARCHAR(20);
+   v_productcd  VARCHAR(5);
+   v_custid  VARCHAR(15);
+   v_empid  VARCHAR(11);
+   v_loanamt  DECIMAL(18,2);
+   v_totdisburseamt  DECIMAL(18,2);
+   v_totunchargeprin  DECIMAL(18,2);
+   v_unutilisedamt  DECIMAL(18,2);
+   v_limitamt  DECIMAL(18,2);
+   v_schdstartdt  TIMESTAMP;
+   v_schdenddt  TIMESTAMP;
+   v_repytype  VARCHAR(4);
+   v_currlloaddt  TIMESTAMP; 
+
+    --  @acctid2 numeric(9), 
+
+   v_unutilisedamt2  VARCHAR(1);
+   tblcursor1 cursor for	
+
+   select distinct accountid,accno,loanamt,totaldisbursementamt,repaymenttype,totalunchargeprincipal
+
+   from TB_CTECP_MBS_Exposure
+
+   where productcode not in('0066','0067');
+   tblcursor2 cursor for
+
+   select    limitamount,schdstartdate,schdenddate
+
+   from 	TB_MBSAcctLimitSchedule
+
+   where    accountid = v_acctid;
+BEGIN
+   v_unutilisedamt := 0;
+
+
+
+---get the current load dt from 
+
+   v_currlloaddt := TO_TIMESTAMP('2009-12-31 00:00:00','yyyy.mm.dd');
+
+--(select currentloaddt from dbscrub.dbo.TB_MBSLoadDt)
+
+
+
+--- This sp is to get the unutilised amt by checking the schdstartdt & schdenddt for FLEX product
+
+-- 1st loop, read records from TB_CTECP_MBS_Exposure
+
+   open tblcursor1;
+
+   fetch tblcursor1 into v_acctid,v_acctno,v_loanamt,v_totdisburseamt,v_repytype,v_totunchargeprin;
+
+
+
+			
+
+		-- If repayment type is = 'FLEX' then go get the schdstartdt &amp; schdenddt
+
+   while FOUND loop
+      if v_repytype = 'FLEX' then
+         open tblcursor2;
+         fetch tblcursor2 into v_limitamt,v_schdstartdt,v_schdenddt;
+         while FOUND loop
+            if v_currlloaddt > v_schdstartdt and v_currlloaddt < v_schdenddt then
+               v_unutilisedamt := v_limitamt -v_totunchargeprin;
+            END IF;
+
+			
+
+				--- fetch next record for 2nd loop
+
+            fetch tblcursor2 into v_limitamt,v_schdstartdt,v_schdenddt;
+         end loop;	--- end for 2nd loop
+
+			
+
+         close tblcursor2;
+      ELSE
+         if v_repytype <> 'FLEX' then
+            v_unutilisedamt := v_loanamt -v_totdisburseamt;
+         END IF;
+      END IF;	
+
+						
+
+	
+
+		--- Assign the Unutilised amount sign
+
+      if v_unutilisedamt >= 0 then
+         v_unutilisedamt2 := '+';
+      ELSE
+         v_unutilisedamt2 := '-';
+      END IF;
+
+
+
+		--- Update Unutilised amount to TB_CTECP_MBS_Exposure
+
+      update TB_CTECP_MBS_Exposure
+      set UnutilizedAmt = v_unutilisedamt,UnutilizedAmtSign = v_unutilisedamt2
+      where(AccountID = v_acctid) and(AccNo = v_acctno); --and
+
+			--(ProductCode = @productcd) and
+
+			--(CustID = @custid) and 
+
+			--(EmpID = @empid)
+
+		
+
+
+
+	--- Clear temp variables
+
+      v_unutilisedamt := 0;
+      v_unutilisedamt2 := '';
+
+	
+
+	--- fetch next record for 1st loop
+
+      fetch tblcursor1 into v_acctid,v_acctno,v_loanamt,v_totdisburseamt,v_repytype,v_totunchargeprin;
+   end loop;
+
+
+
+	--- end for 1st loop
+
+   close tblcursor1;
+
+   RETURN;
+END; $procedure$
+LANGUAGE plpgsql;

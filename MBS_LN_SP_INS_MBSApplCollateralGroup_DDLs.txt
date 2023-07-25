@@ -1,0 +1,35 @@
+set search_path to mbs_loans;
+
+
+CREATE TABLE lk_mbsapplcollateral_key (
+    collateral_key numeric NOT NULL,
+    collateralid numeric(9,0) NOT NULL,
+    collateraltype character varying(2)
+) DISTRIBUTED BY (collateral_key);
+
+
+
+CREATE TABLE tb_mbsapplicationcollateralgroup (
+    collateralgroup integer NOT NULL,
+    collateral_key integer NOT NULL,
+    weightfactor numeric(4,2) NOT NULL,
+    updatedatetime timestamp without time zone NOT NULL,
+    accountid numeric(9,0)
+) DISTRIBUTED BY (accountid);
+
+
+
+CREATE TABLE dbscrub.tb_mbsapplcollateral (
+    applcollat_key integer NOT NULL,
+    accountid numeric(10,0) NOT NULL,
+    collateralid numeric(10,0) NOT NULL,
+    collateraltype character varying(2),
+    lastupdateflag integer NOT NULL,
+    updatedatetime timestamp without time zone NOT NULL
+) DISTRIBUTED BY (accountid);
+
+CREATE TABLE dbscrub.tb_mbsloaddt (
+    previousloaddt timestamp without time zone NOT NULL,
+    currentloaddt timestamp without time zone NOT NULL
+) DISTRIBUTED BY (previousloaddt);
+

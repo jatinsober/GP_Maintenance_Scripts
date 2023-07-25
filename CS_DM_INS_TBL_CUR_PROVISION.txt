@@ -1,0 +1,24 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 09/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION CS_DM_INS_TBL_CUR_PROVISION () RETURNS VOID AS $$
+DECLARE  
+X_dtCurrentDt TIMESTAMP;
+BEGIN
+X_dtCurrentDt= CurrentLoadDt FROM DBScrub.TB_CS_DM_LoadDt;
+
+TRUNCATE TABLE TB_CS_DM_CUR_PROVISION;
+INSERT INTO TB_CS_DM_CUR_PROVISION
+(TheDate, TimeKey, StaticAcctNoKey, IISClosingBalance, SpecificProvisionClosingBalance)
+SELECT b.TheDate, b.Time_key, a.StaticAccountNo_key, a.IISClosingBalance, a.SpecificProvisionClosingBalance
+FROM MBS_LOANS.TB_IPSProvision a, MBS_LOANS.TB_MBSTime b
+WHERE a.time_key = b.Time_key AND b.TheDate = X_dtCurrentDt;
+
+END;
+$$
+LANGUAGE PLPGSQL;

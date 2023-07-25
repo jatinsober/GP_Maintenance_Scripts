@@ -1,0 +1,16 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE or replace VIEW mbs_loans.VW_CS_DM_Get_CurBaseRate_Max_PRTY
+AS
+SELECT     CurBaseRate, ProductComponentCd, MAX(UpdateDateTime) AS MaxUpdDT
+FROM         mbs_loans.VW_CS_DM_Get_CurBaseRate_PRTY
+GROUP BY CurBaseRate, ProductComponentCd
+ORDER BY ProductComponentCd;
+
+alter table mbs_loans.VW_CS_DM_Get_CurBaseRate_Max_PRTY owner to mbs_loans;

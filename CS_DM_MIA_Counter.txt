@@ -1,0 +1,59 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 5/JAN/2012
+-- Desc: Intial Conversion
+--
+-- Dev: Jitendra Lodwal
+-- Date: 26/MARCH/2012
+-- Desc: review Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION CS_DM_MIA_Counter(             
+X_strAccNo VARCHAR(20),
+X_dtCurrentDt TIMESTAMP,
+X_intMths NUMERIC,
+X_intMIA INT,
+X_operator VARCHAR(5),
+OUT X_X_intCounter INT) RETURNS INT AS $$
+
+BEGIN
+IF X_operator='>='  Then
+BEGIN
+
+	X_X_intCounter:=COUNT(*) 
+FROM 
+MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+ON a.time_key=b.time_key AND b.weekofmonth=4
+INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+--and c.lastupdateflag=1
+WHERE 
+c.AccountNo=X_strAccNo AND
+a.CurrentPIA_key -1>=X_intMIA AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<=0 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )> X_intMths;
+END;
+
+ELSE IF X_operator='=' Then
+
+	
+	X_X_intCounter:=COUNT(*) 
+FROM 
+MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+ON a.time_key=b.time_key AND b.weekofmonth=4
+INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE 
+c.AccountNo=X_strAccNo AND
+a.CurrentPIA_key -1=X_intMIA AND
+
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<=0 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )> X_intMths;
+
+End if;
+End if;
+END;
+$$
+Language Plpgsql;

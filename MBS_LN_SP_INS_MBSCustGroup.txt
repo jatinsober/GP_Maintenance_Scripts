@@ -1,0 +1,147 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION MBS_LN_SP_INS_MBSCustGroup() returns void as $$
+
+Declare 
+	X_nAccount_key	integer;
+	X_nAccountID			numeric (9) ;
+	X_NCustomerNo_key		integer;
+	X_NAccountRelation		varchar(2);
+	X_start				timestamp;
+	X_stop 				timestamp;
+	X_printline 			char (50);
+	X_maxkey			integer;
+	X_rowcount			integer;
+	X_Recordcount			integer;
+	X_Membercount			integer;
+	X_varcount			integer;
+	X_Exists			integer;
+	X_NGroup_key			integer;
+	X_NMember			Numeric (2);
+	X_NGroup			Numeric(2);
+	X_NsubMember			Numeric(2);
+	X_NWeightFactor		Numeric (5,4)	;
+	X_NRecordDt			timestamp;
+	X_NCurrDate			timestamp; 
+BEGIN
+
+create temp table MBSCustGroup_csr_rec  As		
+	 Select Distinct AccountID
+From DBScrub.LK_MBSCustomerGroup_key   
+Where   AccountNo Not Like '06%'
+	and AccountNo Not Like '01%'
+	and AccountNo Not Like '04%'
+	and AccountNo Not Like '12%'
+	order by AccountID;
+create temp table Member_csr_rec
+				AS Select distinct AccountRelation 
+				From MBS_Loans.LK_MBSCustomer_key
+				Where AccountID = X_NAccountID
+				Order by AccountRelation;
+create temp table MemberGroup_csr_rec
+						as Select CustomerNo_key
+						From MBS_Loans.LK_MBSCustomer_key
+						Where AccountID = X_NAccountID
+						And AccountRelation = X_NAccountRelation
+						Order by CustomerNo_key;
+
+X_start := now();
+-- select "StartTime :" = now();
+X_rowcount := 1;
+
+
+X_maxkey :=  max(StaticAccountNo_key) from MBS_Loans.LK_MBSAccountStatic_key;
+
+X_NCurrDate := CurrentLoadDt From Dbscrub.TB_MBSLoadDt;
+
+update DBScrub.tb_HLtrack set trackdtstart = now() where id = 25;
+
+while (X_rowcount <= X_maxkey) LOOP
+begin -- while (X_RecordCount <= X_maxkey)
+	
+X_nAccountID := * from MBSCustGroup_csr_rec ;		
+
+--	while (X_X_fetch_status <> -1)
+
+		X_NMember :=  Count(*) From MBS_Loans.LK_MBSCustomer_key
+					Where AccountID = X_nAccountID;	
+					
+		X_NGroup :=  Count(Distinct AccountRelation) From MBS_Loans.LK_MBSCustomer_key
+					Where AccountID = X_nAccountID;
+	 end;
+end loop;
+			If (Select Max(CustomerGroup) from MBS_Loans.TB_MBSCustomerGroup) IS Null
+THEN
+				X_NGroup_key := 1 ;			
+Else 
+create temp table cust_temp as select Max(CustomerGroup) as cost from MBS_Loans.TB_MBSCustomerGroup ;
+				X_NGroup_key :=  cost + 1 from cust_temp ;
+
+		X_RecordCount := 1;
+end if;
+
+		while (X_RecordCount <= X_NMember) LOOP
+
+			X_NAccountRelation := * from Member_csr_rec;
+
+			--while (X_X_fetch_status <> -1)
+			-- while (X_X_fetch_status <> -1)
+				X_MemberCount := 1;
+
+				X_NSubMember :=  Count(*) From MBS_Loans.LK_MBSCustomer_key
+							Where AccountID = X_nAccountID and AccountRelation = X_NAccountRelation;
+	end loop;
+
+				while (X_MemberCount <= X_NSubMember) LOOP
+				begin  --while (X_MemberCount <= X_NSubMember)
+
+					X_NCustomerNo_key := MemberGroup_csr_rec;
+
+					-- while (X_X_fetch_status <> -1)
+					
+				X_varcount :=  count(*) from MBS_Loans.TB_MBSCustomerGroup
+							where Customerno_key = X_NCustomerno_key and UpdateDateTime = X_NCurrDate;
+end;
+END LOOP;
+
+						if X_varcount < 1 THEN
+							
+							Insert into MBS_Loans.TB_MBSCustomerGroup values (X_NGroup_key, X_NCustomerNo_key, ((1.0/X_NSubMember) * (1.0/X_NGroup)),X_NCurrDate,X_NAccountId);
+							
+								update DBScrub.tb_HLtrack set trackkey = X_NCustomerNo_key, trackHLacctID = X_nAccountID,
+								trackdtend = now() where id=25;
+							
+						X_NCustomerNo_key := * from MemberGroup_csr_rec;
+	
+				X_MemberCount := (X_MemberCount + 1);
+				
+
+				X_NAccountRelation := Member_csr_rec ;
+			
+		X_RecordCount := (X_RecordCount + 1);
+				X_nAccountID := MBSCustGroup_csr_rec ;
+	X_rowcount := (X_maxkey + 1);
+
+
+X_stop := now();
+end if;
+
+/* select now() as "EndTime :";
+SELECT extract(hour from X_start) as "numeric of Hour" ;
+SELECT extract(hour from X_stop) as "numeric of Hour" ;
+SELECT extract(minute from X_start) as  "numeric of Minutes" ;
+SELECT extract(minute from  X_stop) as  "numeric of Minutes" ;
+SELECT extract(second from X_start) as  "numeric of Seconds" ;
+SELECT extract(second from  X_stop) as  "numeric of Seconds" ;
+*/
+END;
+$$
+language plpgsql;
+
+

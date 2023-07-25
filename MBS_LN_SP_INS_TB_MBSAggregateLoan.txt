@@ -1,0 +1,175 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION MBS_LN_SP_INS_TB_MBSAggregateLoan () returns void as $$
+
+declare 
+	X_nTime_key	integer;
+	X_nProduct_key	integer;
+	X_nBranchCd_key	integer;
+	X_nStatus_key	integer;
+	X_nPrevSts_key	integer;
+	X_nCurrentPIA_key	integer;
+	X_nPrevPIA_key	integer;
+	X_nLnAmt	money;
+	X_nIntAccr 	money;
+	X_nYTDIntAccr 	money;
+	X_nIntAcc 	money;
+	X_nPrinIA	money;
+	X_nIntIA	money;
+	X_nLPIIA	money;
+	X_nOC1IA	money;
+	X_nOC2IA	money;
+	X_nIISIntIA	money;
+	X_nIISLPIIA	money;
+	X_nPrin		money;
+	X_nInt		money;
+	X_nLPI		money;
+	X_nOC1		money;
+	X_nOC2		money;
+	X_nIntClwb	money;
+	X_nLPIClwb	money;
+	X_nIIS		money;
+	X_nIISLPI	money;
+	X_nUEInt	money;
+	X_nRepayment	 money;
+	X_nRPrin	money;
+	X_nRInt		money;
+	X_nClwbIIS	money;
+	X_nKOPrin	money;
+	X_nKOInt	money;
+	X_nKOLPI	money;
+	X_nKOOC1	money;
+	X_nKOOC2	money;
+
+BEGIN
+
+begin
+	update DBScrub.TB_AggTrack set StartDt =  now() where ID = 1;
+end;
+
+
+	create temp table  Agg_Cursor 
+	as select time_key, product_key, branchcd_key, status_key, previousstatus_key, currentpia_key, previouspia_key,
+	sum(loanamount), sum(interestaccrued), sum(ytdineterestaccrued),
+	sum(interestaccumulated), sum(principalinarrears), sum(interestinarrears),
+	sum(latepaymentinterestinarrears), sum(othercost1inarrears),
+	sum(othercost2inarrears), sum(iisforinterstinarrears), sum(iisforlpiinarrears),
+	sum(balanceprincipal), sum(balanceinterest), sum(balancelpi),
+	sum(balanceothercost1), sum(balanceothercost2),
+	sum(balanceinterestclawback), sum(balancelpiclawback),
+	sum(balanceiis), sum(balanceiislpi), sum(balanceunearnedinterest),
+	sum(repayment), sum(repaymentprincipal), sum(repaymentinterest),
+	sum(clawbackiis), sum(koprincipal), sum(kointerest),
+	sum(kolatepaymentinterest), sum(koothercost1), sum(koothercost2)
+	from tb_mbsloan where time_key = 304
+	group by time_key, product_key, branchcd_key, status_key, previousstatus_key, currentpia_key, previouspia_key
+	order by time_key, product_key, branchcd_key, status_key, previousstatus_key, currentpia_key, previouspia_key;
+
+	  
+	X_nTime_key := time_key from Agg_Cursor;
+	X_nProduct_key := product_key from Agg_Cursor;
+	X_nBranchCd_key  :=  branchcd_key from Agg_Cursor;
+	X_nStatus_key  :=  Status_key from Agg_Cursor;
+	X_nPrevSts_key  :=  previousstatus_key from Agg_Cursor;
+	X_nCurrentPIA_key  :=  currentpia_key from Agg_Cursor;
+	X_nPrevPIA_key  :=  previouspia_key from Agg_Cursor;
+	X_nLnAmt  :=  loanamount from Agg_Cursor;
+	X_nIntAccr  :=  interestaccrued from Agg_Cursor;
+	X_nYTDIntAccr  := ytdineterestaccrued from Agg_Cursor;
+	X_nIntAcc  := interestaccumulated from Agg_Cursor;
+	X_nPrinIA  :=  principalinarrears from Agg_Cursor;
+	X_nIntIA  :=  interestinarrears from Agg_Cursor;
+	X_nLPIIA  :=  latepaymentinterestinarrears from Agg_Cursor;
+	X_nOC1IA  := othercost1inarrears from Agg_Cursor;
+	X_nOC2IA  := othercost2inarrears from Agg_Cursor;
+	X_nIISIntIA  := iisforinterstinarrears from Agg_Cursor;
+	X_nIISLPIIA  := iisforlpiinarrears from Agg_Cursor;
+	X_nPrin  :=  balanceprincipal from Agg_Cursor;
+	X_nInt  :=  balanceinterest from Agg_Cursor;
+	X_nLPI  :=  balancelpi from Agg_Cursor;
+	X_nOC1  := balanceothercost1 from Agg_Cursor;
+	X_nOC2  :=  balanceothercost2 from Agg_Cursor;
+	X_nIntClwb  := balanceinterestclawback from Agg_Cursor;
+	X_nLPIClwb  :=  balancelpiclawback from Agg_Cursor;
+	X_nIIS  := balanceiis from Agg_Cursor;
+	X_nIISLPI  :=  balanceiislpi from Agg_Cursor;
+	X_nUEInt  :=  balanceunearnedinterest from Agg_Cursor;
+	X_nRepayment  :=  repayment from Agg_Cursor;
+	X_nRPrin  :=  repaymentprincipal from Agg_Cursor;
+	X_nRInt  := repaymentinterest from Agg_Cursor;
+	X_nClwbIIS  := clawbackiis from Agg_Cursor;
+	X_nKOPrin  := koprincipal from Agg_Cursor;
+	X_nKOInt  := kointerest  from Agg_Cursor; 
+	X_nKOLPI  := kolatepaymentinterest from Agg_Cursor;
+	X_nKOOC1  := koothercost1 from Agg_Cursor;
+	X_nKOOC2  := koothercost2 from Agg_Cursor;
+
+--	while (X_X_fetch_status <> -1)
+	begin
+			insert into TB_MBSAggregateLoan
+			(time_key, product_key, branchcd_key, status_key, previousstatus_key, pia_key, previouspia_key,
+			loanamount, interestaccrued, ytdineterestaccrued,
+			interestaccumulated, principalinarrears, interestinarrears,
+			latepaymentinterestinarrears, othercost1inarrears,
+			othercost2inarrears, iisforinterstinarrears, iisforlpiinarrears,
+			balanceprincipal, balanceinterest, balancelpi,
+			balanceothercost1, balanceothercost2,
+			balanceinterestclawback, balancelpiclawback,
+			balanceiis, balanceiislpi, balanceunearnedinterest,
+			repayment, repaymentprincipal, repaymentinterest,
+			clawbackiis, koprincipal, kointerest,
+			kolatepaymentinterest, koothercost1, koothercost2)		
+			values
+			(X_nTime_key
+			,X_nProduct_key
+			,X_nBranchCd_key
+			,X_nStatus_key
+			,X_nPrevSts_key
+			,X_nCurrentPIA_key
+			,X_nPrevPIA_key
+			,X_nLnAmt
+			,X_nIntAccr
+			,X_nYTDIntAccr
+			,X_nIntAcc
+			,X_nPrinIA
+			,X_nIntIA
+			,X_nLPIIA
+			,X_nOC1IA
+			,X_nOC2IA
+			,X_nIISIntIA
+			,X_nIISLPIIA
+			,X_nPrin
+			,X_nInt
+			,X_nLPI
+			,X_nOC1
+			,X_nOC2
+			,X_nIntClwb
+			,X_nLPIClwb
+			,X_nIIS
+			,X_nIISLPI
+			,X_nUEInt
+			,X_nRepayment
+			,X_nRPrin
+			,X_nRInt
+			,X_nClwbIIS
+			,X_nKOPrin
+			,X_nKOInt
+			,X_nKOLPI
+			,X_nKOOC1
+			,X_nKOOC2)	;	
+		
+			update DBScrub.TB_AggTrack
+			set Time_Key = X_nTime_key, Product_Key = X_nProduct_key, BranchCd_Key = X_nBranchCd_key,
+			Status_Key = X_nStatus_key, PrevSts_Key = X_nPrevSts_key, CurrPIA_Key = X_nCurrentPIA_key,
+			PrevPIA_Key = X_nPrevPIA_key, EndDt =  now() where ID = 1;
+
+	end;
+end;
+$$
+language plpgsql;

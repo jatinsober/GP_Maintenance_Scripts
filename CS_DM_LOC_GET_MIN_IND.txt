@@ -1,0 +1,54 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION CS_DM_LOC_GET_MIN_IND () RETURNS VOID AS $$
+
+
+DECLARE  
+X_Accountno	VARCHAR(20);
+X_GoodBadIndCC	NUMERIC;
+X_MonthsInArrears NUMERIC;
+X_SEMProdType	VARCHAR(2);
+X_dtCurrentDt TIMESTAMP;
+X_INTMths NUMERIC;
+X_INTMIA INTEGER;
+X_INTCounter INTEGER;
+
+BEGIN
+X_dtCurrentDt:=CurrentLoadDt FROM DBScrub.TB_CS_DM_LoadDt;
+
+CREATE TEMP TABLE tb_csr1 AS SELECT AccountNo, GoodBadIndCC, MonthsInArrears, SEMProdTyp
+FROM TB_CS_DM_PIF_TMP WHERE (SEMProdTyp = 'CC');
+
+
+X_Accountno	:= AccountNo  from tb_csr1;
+X_GoodBadIndCC	:= GoodBadIndCC  from tb_csr1;
+X_MonthsInArrears	:= MonthsInArrears from tb_csr1;
+X_SEMProdType 	:=   SEMProdTyp from tb_csr1;
+
+--WHILE (X_X_fetch_status <> -1)
+
+	IF X_GoodBadIndCC IS NULL Then
+	BEGIN
+	Perform CS_DM_Good_Bad_Ind (X_Accountno,X_dtCurrentDt,-12,'Y');
+
+	X_GoodBadIndCC :=  MIN(indicator) FROM TB_CS_DM_Indicator WHERE SEMProductType=X_SEMProdType
+	                                AND X_MonthsInArrears	>=currentMIAMin AND X_MonthsInArrears<=currentMIAMax	       
+                                             AND X_INTMIA>=previousMIAMin 
+	                                AND X_INTCounter>=preMIACounter AND Portfolio = 'OLD';
+
+	--Update X_GoodBadIndCC into TB_CS_DM_PIF_TMP
+	UPDATE TB_CS_DM_PIF_TMP
+	SET GoodBadIndCC = X_GoodBadIndCC
+	WHERE AccountNo = X_AccountNo AND
+	GoodBadIndCC IS NULL;
+	END;
+END IF;
+END;
+$$
+Language Plpgsql;

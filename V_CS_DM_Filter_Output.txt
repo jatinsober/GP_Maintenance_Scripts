@@ -1,0 +1,20 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 5/JAN/2012
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE VIEW mbs_loans.V_CS_DM_Filter_Output
+AS
+SELECT     mbs_loans.TB_CS_DM_PIF.AgreementNo, MAX(mbs_loans.TB_CS_DM_PIF.TagEffectiveDt) AS tageffectivedt, 
+                      mbs_loans.TB_CS_DM_Status_Code_Ranking.StatusCdRank AS custstRank, mbs_loans.TB_CS_DM_PIF.CusStatus
+FROM         mbs_loans.TB_CS_DM_PIF INNER JOIN
+                      mbs_loans.TB_CS_DM_Status_Code_Ranking ON mbs_loans.TB_CS_DM_PIF.CusStatus = mbs_loans.TB_CS_DM_Status_Code_Ranking.StatusCd
+WHERE     (mbs_loans.TB_CS_DM_PIF.PeriodOfUpdate =
+                          (SELECT     CurrentLoadDt
+                            FROM          DBScrub.TB_CS_DM_LoadDt)) AND (mbs_loans.TB_CS_DM_PIF.SEMProdTyp = 'HL')
+GROUP BY mbs_loans.TB_CS_DM_PIF.AgreementNo, mbs_loans.TB_CS_DM_PIF.CusStatus, mbs_loans.TB_CS_DM_Status_Code_Ranking.StatusCdRank
+ORDER BY mbs_loans.TB_CS_DM_PIF.AgreementNo limit 100;
+

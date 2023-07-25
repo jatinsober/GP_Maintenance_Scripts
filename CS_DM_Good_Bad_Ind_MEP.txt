@@ -1,0 +1,58 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION CS_DM_Good_Bad_Ind_MEP
+(X_dtCurrentDt TIMESTAMP,
+X_intMths NUMERIC,
+X_strCounter VARCHAR(1)) RETURNS VOID AS $$
+
+
+DECLARE 
+X_intMIA INTEGER ;
+X_intCounter INTEGER;
+BEGIN
+
+IF X_strCounter='Y' THEN
+BEGIN
+	X_intMIA := MAX(CurrentPIA_key)-1 FROM MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+	ON a.time_key=b.time_key AND b.weekofmonth=4
+	INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+	ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+	WHERE c.AccountNo='0123' AND
+	a.CurrentPIA_key =a.CurrentPIA_key AND
+	DATEDIFF_2('MONTH',X_dtCurrentDt ,thedate )<=0 AND
+	DATEDIFF_2('MONTH',X_dtCurrentDt ,thedate )> X_intMths
+	GROUP BY CurrentPIA_key;
+	X_intCounter := COUNT(*) 
+	FROM MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+	ON a.time_key=b.time_key AND b.weekofmonth=4
+	INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+	ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+	WHERE c.AccountNo='0123' AND
+	a.CurrentPIA_key =a.CurrentPIA_key AND
+	DATEDIFF_2('MONTH',X_dtCurrentDt ,thedate )<=0 AND
+	DATEDIFF_2('MONTH',X_dtCurrentDt ,thedate )> X_intMths
+	GROUP BY CurrentPIA_key;
+END;
+ELSE
+BEGIN
+	X_intMIA := MAX(CurrentPIA_key)-1 
+	FROM MBS_Loans.TB_MBSLoan a INNER JOIN MBS_Loans.TB_MBSTime b
+	ON a.time_key=b.time_key AND b.weekofmonth=4
+	INNER JOIN MBS_Loans.TB_MBSAccountStatic c
+	ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+	WHERE c.AccountNo='0123' AND
+	a.CurrentPIA_key =a.CurrentPIA_key AND
+	DATEDIFF_2('MONTH',X_dtCurrentDt ,thedate )<=0 AND
+	DATEDIFF_2('MONTH',X_dtCurrentDt ,thedate )> X_intMths;
+END;
+END IF;
+END;
+$$ 
+LANGUAGE plpgsql;
+

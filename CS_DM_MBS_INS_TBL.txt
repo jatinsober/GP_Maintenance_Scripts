@@ -1,0 +1,644 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 09/DEC/2011
+-- Desc: Intial Conversion
+--
+SEARCH_PATH TO MBS_LOANS;
+
+
+CREATE  OR REPLACE FUNCTION CS_DM_MBS_INS_TBL() RETURNS VOID AS $$
+
+DECLARE
+X_SP_Nm VARCHAR(40);
+X_Prod_Nm VARCHAR(5);
+X_RecordType	VARCHAR(2);
+X_PeriodOfUpdate	TIMESTAMP;
+X_timeKeyMBS INTEGER;
+X_dtCurrentDt TIMESTAMP;
+
+BEGIN
+
+X_SP_Nm :='CS_DM_MBS_INS_TBL';
+X_Prod_Nm :='HL';
+
+X_PeriodOfUpdate:= CurrentLoadDt FROM DBScrub.TB_CS_DM_LoadDt;
+X_dtCurrentDt:=X_PeriodOfUpdate;
+X_timeKeyMBS:= time_key FROM MBS_Loans.TB_MBSTime WHERE TheDate=X_dtCurrentDt;
+
+--Start insert data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start insert records into TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+INSERT INTO TB_CS_DM_PIF_TMP
+(RecordType, AgreementNo, PRSInd, 
+AccountNo, SEMProdTyp, CusNo, CustID, Bal, l_limit, StaffFlg, CusStatus, NPLFlg, ProdType, ClosedDt, WriteOffFlg, 
+WriteOffDt, AppDt, AgeOfAcct, PeriodOfUpdate, MonthsInArrears, DelinquencyStatus, RestructuredAccFlg, ArrearsAmt, FraudAccFlgHL, FraudAccFlgHP, DeceasedFlg, FullDisbDt, DisbAmt, 
+TagEffectiveDt, TagExpiryDt, AccStatus, RCRSTag, Bankruptcy, ProvisionTag, WriteOffAmt, LoanMaturityDt, TimeKey, ProductKey, StaticAcctNoKey,  
+IntSpreadValue, EffectiveRate, PrtyCapInd, ProdCompCode, ProductGroup, ProductClass, AccountRelation, MEPProdTyp, AcctPlmtTag, VIPFlg)
+SELECT '01', CASE WHEN i.PRSNo IS NULL THEN b.accountNo ELSE i.PRSNO END AS AgreementNo,
+CASE WHEN i.PRSNo IS NULL THEN 'N' ELSE 'Y' END AS PRSInd, 
+b.accountNo AS Accountno, 
+CASE WHEN g.ProdType IS NULL THEN '99' ELSE g.ProdType END AS SEMProdType,
+c.customerno AS CusNo, c.customerid AS CustID,
+CASE WHEN g.ProductCode IN ('2301', '2302', '2701', '2702') THEN a.BalancePrincipal + a.BalanceInterest ELSE
+a.BalancePrincipal + a.BalanceInterest + a.BalanceLPI
++ a.BalanceOtherCost1 + a.BalanceOtherCost2 - a.BalanceUnearnedInterest END AS Bal, a.LoanAmount AS l_limit, 
+CASE WHEN d.StaffStatus='Y' THEN 'Y' ELSE 'N' END AS StaffFlg,
+CASE WHEN b.AccountStatus IN ('LNWD','LNWO') THEN 'WT' 
+WHEN f.PlacementTag IN ('LBAS','LBAI') AND f.TagExpiryDt IS NULL THEN 'SF'
+WHEN f.PlacementTag ='LNRC' AND f.TagExpiryDt IS NULL THEN 'RT'
+WHEN f.PlacementTag IN ('LNRS','LNRL') AND f.TagExpiryDt IS NULL THEN 'RS'
+WHEN b.AccountStatus='LNSP' OR (f.PlacementTag IN ('LNTS','LNSA') AND f.TagExpiryDt IS NULL) THEN 'NA'
+WHEN f.PlacementTag IN ('LNJA','LLOD','LLSM','LLBN','LLPO','LJDS','LJPD') AND f.TagExpiryDt IS NULL THEN 'LG'
+WHEN f.PlacementTag IN ('LNIR','LNRT','LNCG') AND f.TagExpiryDt IS NULL THEN 'RC'
+WHEN b.AccountStatus='LNOP' THEN 'AC' 
+WHEN b.AccountStatus='LNCL' THEN 'CL' END AS CusStatus,
+CASE WHEN b.AccountStatus IN ('LNWO','LNWD','LNSP') OR (f.PlacementTag IN ('LNTS','LNSA','LBAS','LBAI')  AND 
+f.TagExpiryDt IS NULL) THEN 'Y' ELSE 'N' END AS NPLFlg, g.ProductCode AS ProdType,         
+CASE WHEN b.AccountStatus='LNCL' THEN b.StatusEffectiveDt END AS ClosedDt,
+CASE WHEN b.AccountStatus IN ('LNWO','LNWD') OR f.PlacementTag = 'LNWC' THEN 'Y' ELSE 'N' END AS WriteOffFlg,
+CASE WHEN b.AccountStatus IN ('LNWO','LNWD') THEN b.StatusEffectiveDt END AS WriteOffDt,
+b.OpenDt AS AppDt, DATEDIFF_2('month', b.OpenDt, X_PeriodOfUpdate) AS AgeOfAcct, X_PeriodOfUpdate, (a.CurrentPIA_key -1) AS MIA,
+CASE WHEN a.CurrentPIA_key -1=0 THEN '01' WHEN a.CurrentPIA_key -1=1 THEN '02'
+WHEN a.CurrentPIA_key -1=2 OR a.CurrentPIA_key -1=3 THEN '03' 
+WHEN a.CurrentPIA_key -1=4 OR a.CurrentPIA_key -1=5 THEN '04'
+WHEN a.CurrentPIA_key -1>=6 AND a.CurrentPIA_key -1<=8 THEN '05'
+WHEN a.CurrentPIA_key -1>=9 AND a.CurrentPIA_key -1<=11 THEN '06'
+WHEN a.CurrentPIA_key -1>=12 THEN '07' END AS DelinquencyStatus,
+CASE WHEN f.PlacementTag IN ('LNRC','LNER','LNRS','LNRL') AND f.TagExpiryDt IS NULL THEN 'Y' ELSE 'N' END AS RestructuredAccFlg,
+a.PrincipalInArrears+a.InterestInArrears+a.LatePaymentInterestInArrears+
+a.OtherCost1InArrears+a.OtherCost2InArrears AS ArrearsAmt,
+CASE WHEN f.TagReason ='R3' OR f.PlacementTag = 'LFRD' THEN 'Y' ELSE 'N' END AS FraudAccFlgHL,
+CASE WHEN f.TagReason ='R3' OR f.PlacementTag = 'LFRD' THEN 'Y' ELSE 'N' END AS FraudAccFlgHP,
+CASE WHEN c.CustomerStatus IN ('DC','DW') OR f.PlacementTag = 'LDEC' THEN 'Y' ELSE 'N' END AS DeceasedFlg,
+b.FullDisbDt AS FullDisbDt, b.TotalDisbursementAmount AS DisbAmt,
+f.TagEffectiveDt as TagEffectiveDt, f.TagExpiryDt as TagExpiryDt, b.AccountStatus AS AccStatus, 
+CASE WHEN f.PlacementTag IN ('LNRC','LNLR','LNPK','LNRS','LNRL') THEN 'Y' ELSE 'N' END AS RCRSTag,	
+CASE WHEN c.CustTag = 'BK' OR f.PlacementTag IN ('LAOR','LPOD','LWUP') THEN 'Y' ELSE 'N' END AS Bankruptcy,
+CASE WHEN b.ProvisionTag = 'Y' THEN 'Y' ELSE 'N' END AS ProvisionTag,
+j.SubLedgerWriteOffAmountToDt AS WriteOffAmt, b.MaturityDt AS LoanMaturityDt, X_timeKeyMBS,
+g.Product_key AS ProductKey, b.StaticAccountNo_key AS StaticAcctNoKey,
+h.InterestSpreadValue, CASE WHEN h.InterestRate IS NULL THEN 0 ELSE h.InterestRate * 100 END AS EffectiveRate,
+b.PriorityCapIndicator, b.ProdComponentCode, g.ProductGroup, g.ProductClass, c.AccountRelation,
+CASE WHEN g.LoanProd_key = 'RTC' THEN 'PF' 
+	WHEN g.ProdType IS NULL THEN '99' 
+	ELSE g.ProdType END AS MEPProdType,
+f.PlacementTag, CASE WHEN c.CustTag = 'VP' THEN 'Y' ELSE 'N' END AS VIPFlag
+
+FROM MBS_LOANS.TB_MBSLoan a INNER JOIN
+MBS_LOANS.TB_MBSAccountStatic b ON a.StaticAccountNo_key = b.StaticAccountNo_key INNER JOIN
+MBS_LOANS.TB_MBSCustomer c ON a.CustomerNo_key = c.CustomerNo_key INNER JOIN
+MBS_LOANS.TB_MBSIndividual d ON c.Individual_key = d.Individual_key INNER JOIN
+MBS_LOANS.TB_MBSMultiTagGroup e ON a.MultiTagGroup = e.MultiTagGroup INNER JOIN
+MBS_LOANS.TB_MBSMultiTag f ON e.MultiTag_key = f.MultiTag_key INNER JOIN
+MBS_LOANS.TB_MBSAccountDynamic h ON a.DynamicAccountNo_key = h.DynamicAccountNo_key INNER JOIN
+MBS_LOANS.TB_MBSWriteOff j ON a.WriteOff_key = j.WriteOff_key INNER JOIN
+MBS_LOANS.CS_VW_LK_LOANPROD g ON a.Product_key = g.Product_key LEFT OUTER JOIN
+MBS_LOANS.TB_MBSPRS_key i ON b.AccountNo = i.AccountNo
+WHERE a.Time_key= X_timeKeyMBS AND
+g.ProductGroup <>'06' AND
+(b.AccountStatus <> 'LNCL' OR 
+	(b.AccountStatus = 'LNCL' AND DATEDIFF_2('year',b.StatusEffectiveDt,X_dtCurrentDt) = 0 AND DATEDIFF_2
+		('month',b.StatusEffectiveDt,X_dtCurrentDt) = 0));	
+
+
+--End Insert
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End insert records into TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+--Start Update GoodBadIndHL, GoodBadFlgHL
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start update GoodBadIndHL - TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+--Start to update GoodBadIndHL
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET GoodBadIndHL = CASE WHEN AccStatus = 'LNCL' THEN 11
+		     WHEN RestructuredAccFlg = 'Y' THEN 12 
+		     WHEN WriteOffflg = 'Y' THEN 1 END 	   
+WHERE ProductGroup <>'06';
+---13dec10--> 12s upd for nov2010
+
+--If GoodBadIndHL IS NULL then
+--get highest MIA (intMIA)
+Truncate table TB_CS_DM_TMP_GBInd;
+INSERT INTO TB_CS_DM_TMP_GBInd(AccountNo, intMIA, intCounter)
+SELECT c.AccountNo, MAX(CurrentPIA_key)-1 as intMIA,  COUNT(*) AS intCounter 
+FROM TB_MBSLoan a INNER JOIN TB_MBSTime b ON a.time_key = b.time_key AND b.WeekOfMonth = 4 INNER JOIN 
+TB_MBSAccountStatic c ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE a.CurrentPIA_key =a.CurrentPIA_key AND
+c.ProductGroup <>'06' AND 
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<= 0 AND DATEDIFF_2('month',X_dtCurrentDt ,thedate )> -12
+GROUP BY AccountNo, CurrentPIA_key;
+---13dec --> 6m7s for nov2010
+
+--get tmpCounter for MIA = 2 (tmpCounter)
+Truncate table TB_CS_DM_TMP_intCounter;
+INSERT INTO TB_CS_DM_TMP_intCounter(AccountNo, tmpCounter)
+SELECT AccountNo, COUNT(*) as intCounter
+FROM TB_MBSLoan a INNER JOIN TB_MBSTime b ON a.time_key=b.time_key AND b.WeekOfMonth = 4 INNER JOIN TB_MBSAccountStatic c ON 
+a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE a.CurrentPIA_key -1 = 2 AND c.ProductGroup <> '06' AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<= 0 AND DATEDIFF_2('month',X_dtCurrentDt ,thedate )> -12
+GROUP BY AccountNo;
+---13dec --> 4m42s for nov2010
+
+--insert into tmp table to get Max intMIA & tmpCounter
+Truncate table TB_CS_DM_TMP_MAXMIA;
+INSERT INTO TB_CS_DM_TMP_MAXMIA (AccountNo, intMIA, tmpCounter)
+SELECT a.AccountNo, MAX(a.intMIA) AS intMIA, b.tmpCounter
+FROM TB_CS_DM_TMP_GBInd a INNER JOIN TB_CS_DM_TMP_intCounter b 
+ON a.AccountNo = b.AccountNo
+GROUP BY a.AccountNo, b.tmpCounter
+ORDER BY a.AccountNo;
+--13dec --> 5s to get nov2010
+
+--insert into tmp table to get GBInd for 4 or 5
+Truncate table TB_CS_DM_TMP_UPD_GBInd;
+INSERT INTO TB_CS_DM_TMP_UPD_GBInd (AccountNo, GBInd)
+SELECT b.AccountNo, CASE WHEN a.tmpCounter >= 2 THEN 4 ELSE 5 END AS GoodBadIndHL 
+FROM TB_CS_DM_TMP_MAXMIA a, TB_CS_DM_PIF_TMP b
+WHERE a.AccountNo = b.AccountNo AND a.intMIA = 3;
+--13dec --> 5s to get nov2010
+
+--update GBIndHL into TB_CS_DM_PIF_TMP
+UPDATE TB_CS_DM_PIF_TMP
+SET GoodBadIndHL = CAST(a.GBInd AS NUMERIC)
+FROM TB_CS_DM_TMP_UPD_GBInd a, TB_CS_DM_PIF_TMP b
+WHERE a.AccountNo = b.AccountNo AND b.GoodBadIndHL IS NULL;
+--note 2m + to completed update
+---13dec --> 2s to upd for nov2010
+
+--24Dec10 update rec with GBInd = 5 if the rec not found in TB_CS_DM_TMP_intCounter & intMIA = 3
+----get the max intMIA from TB_CS_DM_TMP_GBInd & insert into tmp table
+TRUNCATE TABLE TB_CS_DM_TMP_GBInd_MIA3;
+INSERT INTO TB_CS_DM_TMP_GBInd_MIA3(AccountNo, intMIA)
+SELECT AccountNo, MAX(intMIA) AS intMIA
+FROM TB_CS_DM_TMP_GBInd
+GROUP BY AccountNO
+ORDER BY AccountNo;
+--note 20s inserted 855,410 rec
+
+UPDATE TB_CS_DM_PIF_TMP
+SET GoodBadIndHL = 5
+FROM TB_CS_DM_TMP_GBInd_MIA3 a, TB_CS_DM_PIF_TMP b
+WHERE a.AccountNo = b.AccountNo AND a.intMIA = 3 AND b.GoodBadIndHL IS NULL;
+
+--If GoodBadIndHL IS NULL then get min indicator  
+--get maxMIA by AccountNo from TB_CS_DM_TMP_GBInd & insert into tmp table
+TRUNCATE TABLE TB_CS_DM_TMP_MAXMIA2;
+INSERT INTO TB_CS_DM_TMP_MAXMIA2 (AccountNo, MaxMIA)
+SELECT AccountNo, MAX(intMIA) AS MaxMIA FROM TB_CS_DM_TMP_GBInd
+GROUP BY AccountNo;
+
+--get intCounter & insert into tmp table
+TRUNCATE TABLE TB_CS_DM_TMP_DIST_GBInd;
+INSERT INTO TB_CS_DM_TMP_DIST_GBInd (AccountNo, intMIA, intCounter)
+SELECT a.AccountNo, a.MaxMIA, b.intCounter
+FROM TB_CS_DM_TMP_MAXMIA2 a, TB_CS_DM_TMP_GBInd b
+WHERE a.AccountNo = b.AccountNo AND a.MaxMIA = b.intMIA;
+
+--get min indicator & insert into tmp table
+TRUNCATE TABLE TB_CS_DM_TMP_MINIndicator;
+INSERT INTO TB_CS_DM_TMP_MINIndicator (AccountNo, MinIndicator)
+SELECT a.AccountNo, MIN(b.Indicator) AS MinIndicator
+FROM TB_CS_DM_TMP_DIST_GBInd a, TB_CS_DM_Indicator b
+WHERE a.intMIA >= b.previousMIAMin AND a.intCounter >= b.preMIACounter AND 
+      b.SEMProductType = 'HL' AND b.Portfolio = 'OLD'
+GROUP BY a.AccountNo, a.intMIA, a.intCounter;
+--note 43s to get 855,410 records
+
+--update MinIndicator as GoodBadIndHL into TB_CS_DM_PIF_TMP
+UPDATE TB_CS_DM_PIF_TMP
+SET GoodBadIndHL = b.MinIndicator
+FROM TB_CS_DM_PIF_TMP a, TB_CS_DM_TMP_MINIndicator b
+WHERE a.AccountNo = b.AccountNo AND a.GoodBadIndHL IS NULL;
+--note 39m18s to update 279,828 records
+--14dec --> 7s to upd for nov2010
+--end to update GoodBadIndHL
+
+--Update GoodBadFlgHL
+/*
+UPDATE TB_CS_DM_PIF_TMP
+SET GoodBadFlgHL = (SELECT Flg FROM TB_CS_DM_Indicator AS a
+		    WHERE a.indicator = MBS_LOANS.TB_CS_DM_PIF_TMP.GoodBadIndHL AND 
+                    SEMProductType = 'HL' AND Portfolio = 'OLD')
+WHERE ProductGroup <>'06' AND NOT(GoodBadIndHL IS NULL)
+*/
+--WHERE SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99') AND NOT(GoodBadIndHL IS NULL)
+--note 6m6s to upd for 769,438 records
+--14dec --> 58s to upd for nov2010
+
+CREATE TEMP TABLE DX1 AS SELECT Flg FROM TB_CS_DM_Indicator AS a,MBS_LOANS.TB_CS_DM_PIF_TMP
+		    WHERE a.indicator = MBS_LOANS.TB_CS_DM_PIF_TMP.GoodBadIndHL AND 
+                    SEMProductType = 'HL' AND Portfolio = 'OLD';
+UPDATE TB_CS_DM_PIF_TMP
+SET GoodBadFlgHL = DX1.Flg FROM DX1
+WHERE ProductGroup <>'06' AND NOT(GoodBadIndHL IS NULL);
+
+--Upadte EGoodbadInd & EGoodBadFlg
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET EGoodBadInd = GoodBadIndHL, 
+    EGoodBadFlg = GoodBadFlgHL
+WHERE ProductGroup <>'06';
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET GoodBadIndHP = 0,
+    GoodBadFlgHP = NULL,
+    EGoodBadInd = 0,
+    EGoodBadFlg = NULL
+WHERE SEMProdTyp = 'HP';
+
+--note 1m24s to upd for 473,635 recrods
+--14dec --> 10s upd for nov2010
+
+--End Update GoodBadIndHL, GoodBadFlgHL
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End update GoodBadIndHL - TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+--Start Update Last X months data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start update Last X month data - TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+--Update NoOfDelinquencyStatus2L12m in TB_CS_DM_PIF_TMP
+--get intCounter & insert into temp table
+TRUNCATE TABLE TB_CS_DM_TMP1;
+INSERT INTO TB_CS_DM_TMP1 (AccountNo, NoOfDlqSts2L12M)
+SELECT AccountNo, COUNT(*) as intCounter
+FROM TB_MBSLoan a INNER JOIN TB_MBSTime b
+ON a.time_key = b.time_key AND b.weekofmonth=4 INNER JOIN TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE  c.ProductGroup <> '06' AND a.CurrentPIA_key -1 >= 2 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<= 0 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )> -12
+GROUP BY AccountNo;
+
+UPDATE TB_CS_DM_PIF_TMP
+SET NoOfDelinquencyStatus2L12m = b.NoOfDlqSts2L12M
+FROM TB_CS_DM_PIF_TMP a, TB_CS_DM_TMP1 b
+WHERE a.AccountNo = b.AccountNo;
+--14dec --> 15s to upd for nov2010
+
+--Update NoOfDelinquencyStatus3L12m in TB_CS_DM_PIF_TMP
+--get intCounter & insert into temp table
+TRUNCATE TABLE TB_CS_DM_TMP2;
+INSERT INTO TB_CS_DM_TMP2 (AccountNo, NoOfDlqSts3L12M)
+SELECT AccountNo,COUNT(*) as intCounter
+FROM TB_MBSLoan a INNER JOIN TB_MBSTime b
+ON a.time_key = b.time_key AND b.weekofmonth=4 INNER JOIN TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE  c.ProductGroup <> '06' AND a.CurrentPIA_key -1 >= 3 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<= 0 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )> -12
+GROUP BY AccountNo;
+
+UPDATE TB_CS_DM_PIF_TMP
+SET NoOfDelinquencyStatus3L12m = b.NoOfDlqSts3L12M
+FROM TB_CS_DM_PIF_TMP a, TB_CS_DM_TMP2 b
+WHERE a.AccountNo = b.AccountNo;
+--14dec --> 4s to upd for nov2010
+
+--Update WorstArrersL12m in TB_CS_DM_PIF_TMP
+--get Max MIA & insert into tmp table
+TRUNCATE TABLE TB_CS_DM_TMP3 ;
+INSERT INTO TB_CS_DM_TMP3 (AccountNo, MaxMIAL12M)
+SELECT AccountNo, MAX(CurrentPIA_key)-1 as intMIA
+FROM TB_MBSLoan a INNER JOIN TB_MBSTime b
+ON a.time_key = b.time_key AND b.weekofmonth=4 INNER JOIN TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE  c.ProductGroup <> '06' AND a.CurrentPIA_key = a.CurrentPIA_key AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<= 0 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )> -12
+GROUP BY AccountNo;
+
+UPDATE TB_CS_DM_PIF_TMP
+SET WorstArrearsL12m = b.MaxMIAL12M
+FROM TB_CS_DM_PIF_TMP a, TB_CS_DM_TMP3 b
+WHERE a.AccountNo = b.AccountNo;
+--14dec --> 22s upd for nov2010
+
+--Update WorstMIAL3m in TB_CS_DM_PIF_TMP
+--get MaxMIA & insert into tmp table
+TRUNCATE TABLE TB_CS_DM_TMP4;
+INSERT INTO TB_CS_DM_TMP4 (AccountNo, MaxMIAL3M)
+SELECT AccountNo,MAX(CurrentPIA_key)-1 as intMIA
+FROM TB_MBSLoan a INNER JOIN TB_MBSTime b
+ON a.time_key = b.time_key AND b.weekofmonth=4 INNER JOIN TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE  c.ProductGroup <> '06' AND a.CurrentPIA_key = a.CurrentPIA_key AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<= 0 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )> -3
+GROUP BY AccountNo;
+
+UPDATE TB_CS_DM_PIF_TMP
+SET WorstMIAL3m = b.MaxMIAL3M
+FROM TB_CS_DM_PIF_TMP a, TB_CS_DM_TMP4 b
+WHERE a.AccountNo = b.AccountNo;
+--14dec --> 21s to upd for nov2010
+
+--Update WorstMIAL6m in TB_CS_DM_PIF_TMP
+--get MaxMIA & insert into tmp table
+TRUNCATE TABLE TB_CS_DM_TMP5 ;
+INSERT INTO TB_CS_DM_TMP5 (AccountNo, MaxMIAL6M)
+SELECT AccountNo,MAX(CurrentPIA_key)-1 as intMIA
+FROM TB_MBSLoan a INNER JOIN TB_MBSTime b
+ON a.time_key = b.time_key AND b.weekofmonth=4 INNER JOIN TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE  c.ProductGroup <> '06' AND a.CurrentPIA_key = a.CurrentPIA_key AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<= 0 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )> -6
+GROUP BY AccountNo;
+
+UPDATE TB_CS_DM_PIF_TMP
+SET WorstMIAL6m = b.MaxMIAL6M
+FROM TB_CS_DM_PIF_TMP a, TB_CS_DM_TMP5 b
+WHERE a.AccountNo = b.AccountNo;
+--14dec --> 21s to upd for nov2010
+
+--Update WorstMIAL9m in TB_CS_DM_PIF_TMP
+--get MaxMIA & insert into tmp table
+TRUNCATE TABLE TB_CS_DM_TMP6 ;
+INSERT INTO TB_CS_DM_TMP6 (AccountNo, MaxMIAL9M)
+SELECT AccountNo,MAX(CurrentPIA_key)-1 as intMIA
+FROM TB_MBSLoan a INNER JOIN TB_MBSTime b
+ON a.time_key = b.time_key AND b.weekofmonth=4 INNER JOIN TB_MBSAccountStatic c
+ON a.StaticAccountNo_key = c.StaticAccountNo_key 
+WHERE  c.ProductGroup <> '06' AND a.CurrentPIA_key = a.CurrentPIA_key AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )<= 0 AND
+DATEDIFF_2('month',X_dtCurrentDt ,thedate )> -9
+GROUP BY AccountNo;
+
+UPDATE TB_CS_DM_PIF_TMP
+SET WorstMIAL9m = b.MaxMIAL9M
+FROM TB_CS_DM_PIF_TMP a, TB_CS_DM_TMP6 b
+WHERE a.AccountNo = b.AccountNo;
+--14dec --> 23s to upd for nov2010
+
+--End Update Last X months data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End update Last X month data - TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+--Start Update New GoodBadInd
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start update New GoodBadInd - TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+---Update for New GoodBadInd
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NGoodBadInd = CASE WHEN Bankruptcy = 'Y' THEN 1
+	           WHEN RCRSTag = 'Y' THEN 2
+	           WHEN AccStatus IN ('LNWD','LNWO') THEN 4
+                   WHEN ProvisionTag = 'Y' THEN 5	
+                   WHEN AccStatus = 'LNSP' THEN 6 END
+WHERE ProductGroup <>'06';
+--WHERE SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99')
+--14dec --> 12s to upd for nov2010
+
+--Update GBIndicator 7 for HP only
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NGoodBadInd = CASE WHEN AcctPlmtTag IN ('LNRP','L16D','LFCL') THEN 7 END
+WHERE SEMProdTyp ='HP' AND NGoodBadInd IS NULL;
+
+--If NGoodBadInd IS NULL then
+--get the highest MIA & define the NGoodBadInd
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NGoodBadInd =  CASE WHEN WorstArrearsL12m >= 4 THEN 8
+	           WHEN WorstArrearsL12m = 3 THEN 9 END
+WHERE ProductGroup <>'06' AND NGoodBadInd IS NULL;
+--WHERE SEMProdTyp IN ('HL','HP', 'CCL', 'AM', '99') AND NGoodBadInd IS NULL
+--14dec --> 5s to upd for nov2010
+
+--If NGoodBadInd IS NULL then
+--update to 10
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NGoodBadInd = 10
+WHERE NGoodBadInd IS NULL AND ProductGroup <>'06';
+
+--If NGoodBadInd IS NOT NULL then
+--Update NGoodBadFlg
+/*
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NGoodBadFlg = (SELECT Flg FROM TB_CS_DM_Indicator AS a
+		   WHERE a.indicator = MBS_LOANS.TB_CS_DM_PIF_TMP.NGoodBadInd AND
+                   a.SEMProductType = 'HL' AND a.Portfolio = 'NEW')    
+WHERE NGoodBadInd IS NOT NULL AND ProductGroup <>'06'
+*/
+CREATE TEMP TABLE SXX As SELECT Flg FROM TB_CS_DM_Indicator AS a, MBS_LOANS.TB_CS_DM_PIF_TMP
+		   WHERE a.indicator = MBS_LOANS.TB_CS_DM_PIF_TMP.NGoodBadInd AND
+                   a.SEMProductType = 'HL' AND a.Portfolio = 'NEW';
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NGoodBadFlg = SXX.Flg FROM SXX    
+WHERE NGoodBadInd IS NOT NULL AND ProductGroup <>'06';
+
+--End Update Last X months data
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End update New GoodBadInd - TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+
+--Start Update CusStatusRank & others
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start update CusStatusRank & others - TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+--Update CusStatusRank
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET CusStatusRank =  CASE WHEN CusStatus = 'WT' THEN 13
+		     WHEN CusStatus = 'SF' THEN 12
+		     WHEN CusStatus = 'RT' THEN 11
+		     WHEN CusStatus = 'RS' THEN 10
+		     WHEN CusStatus = 'NA' THEN 9
+		     WHEN CusStatus = 'LG' THEN 8
+		     WHEN CusStatus = 'RC' THEN 7
+		     WHEN CusStatus = 'AC' THEN 4
+		     WHEN CusStatus = 'CL' THEN 2 END
+WHERE ProductGroup <>'06';
+
+--Upate FraudAccFlgAll = FraudAccFlgHL	
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET FraudAccFlgAll = FraudAccFlgHL
+WHERE ProductGroup <>'06' AND SEMProdTyp <> 'HP';
+
+--5Apr11
+--Upate FraudAccFlgAll = FraudAccFlgHP
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET FraudAccFlgAll = FraudAccFlgHP
+WHERE SEMProdTyp = 'HP';
+
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET StolenVehicleUnderInsClaimHP = CASE WHEN AcctPlmtTag = 'LUIC' THEN 'Y' ELSE 'N' END
+WHERE SEMProdTyp = 'HP';
+
+--Update NPLFlag for HP certain product code only
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NPLFlg = CASE WHEN MonthsInArrears > 3 THEN 'Y' ELSE 'N' END
+WHERE SEMProdTyp = 'HP';
+
+--End Update CusStatusRank & others
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End update CusStatusRank & others - TB_CS_DM_PIF_TMP',CURRENT_DATE);
+
+
+--Start Update all numeric fields to 0 if IS NULL
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','Start Update all numeric fields to 0 if IS NULL',CURRENT_DATE);
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET Bal = 0
+WHERE Bal IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET l_limit = 0
+WHERE l_limit IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NGoodBadInd = 0
+WHERE NGoodBadInd IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET GoodBadIndHP = 0
+WHERE GoodBadIndHP IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET GoodBadIndHL = 0
+WHERE GoodBadIndHL IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET GoodBadIndCC = 0
+WHERE GoodBadIndCC IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET AgeOfAcct = 0
+WHERE AgeOfAcct IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET MonthsInArrears = 0
+WHERE MonthsInArrears IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET WorstArrearsL12m = 0
+WHERE WorstArrearsL12m IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NoOfDelinquencyStatus2L12m = 0
+WHERE NoOfDelinquencyStatus2L12m IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET NoOfDelinquencyStatus3L12m = 0
+WHERE NoOfDelinquencyStatus3L12m IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET ArrearsAmt = 0
+WHERE ArrearsAmt IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET WorstMIAL3m = 0
+WHERE WorstMIAL3m IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET WorstMIAL6m = 0
+WHERE WorstMIAL6m IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET WorstMIAL9m = 0
+WHERE WorstMIAL9m IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET PIFSpareNumeric1 = 0
+WHERE PIFSpareNumeric1 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET EGoodBadInd = 0
+WHERE EGoodBadInd IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET InterestInSupense = 0
+WHERE InterestInSupense IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpecificProvision = 0
+WHERE SpecificProvision IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET UtilisationAmt = 0
+WHERE UtilisationAmt IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET WriteOffAmt = 0
+WHERE WriteOffAmt IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET LockInPeriod = 0
+WHERE LockInPeriod IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'PL', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET DisbAmt = 0
+WHERE DisbAmt IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET AgeOfFirstDisb = 0
+WHERE AgeOfFirstDisb IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET RecoveryAmt = 0
+WHERE RecoveryAmt IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET FeesIncufrmRecovery = 0
+WHERE FeesIncufrmRecovery IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET CashAdvanceAmt = 0
+WHERE CashAdvanceAmt IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric5 = 0
+WHERE SpareNumeric5 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric6 = 0
+WHERE SpareNumeric6 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric7 = 0
+WHERE SpareNumeric7 IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric8 = 0
+WHERE SpareNumeric8 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric9 = 0
+WHERE SpareNumeric9 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric10 = 0
+WHERE SpareNumeric10 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric11 = 0
+WHERE SpareNumeric11 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric12 = 0
+WHERE SpareNumeric12 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric13 = 0
+WHERE SpareNumeric13 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric14 = 0
+WHERE SpareNumeric14 IS NULL ;--AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET SpareNumeric15 = 0
+WHERE SpareNumeric15 IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+UPDATE MBS_LOANS.TB_CS_DM_PIF_TMP
+SET IntSpreadValue = 0
+WHERE IntSpreadValue IS NULL; --AND SEMProdTyp IN ('HL','HP', 'CC', 'AM', '99');
+
+--End Update all numeric fields to 0 if IS NULL
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+VALUES (X_PeriodOfUpdate, 'MBS','End Update all numeric fields to 0 if IS NULL',CURRENT_DATE);
+
+END ;
+$$
+LANGUAGE PLPGSQL;

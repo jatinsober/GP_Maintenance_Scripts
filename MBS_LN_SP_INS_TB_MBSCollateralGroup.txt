@@ -1,0 +1,175 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION MBS_LN_SP_INS_TB_MBSCollateralGroup () returns void as $$
+
+declare X_nAccount_key	integer; 
+	X_nAccountID			numeric (9) ;
+	X_nAccountNo			varchar (13); 
+	X_NCollateral_key		integer;
+	X_NCollateralType		varchar(2);
+	X_start				timestamp;
+	X_stop 				timestamp;
+	X_printline 			char (50);
+	X_maxkey			integer;
+	X_rowcount			integer;
+	X_Recordcount			integer;
+	X_Membercount			integer;
+	X_varcount			integer;
+	X_Exists			integer;
+	X_NGroup_key			integer;
+	X_NMember			Numeric (2);
+	X_NGroup			Numeric(2);
+	X_NsubMember			Numeric(2);
+	X_NWeightFactor		Numeric (5,4)	;
+	X_NRecordDt			timestamp;
+BEGIN
+
+create temp table CollateralMemberGroup_csr AS
+ 						 Select Collateral_key
+						From MBS_Loans.LK_MBSCollateral_key
+						Where AccountID = X_NAccountID
+						And CollateralType = X_NCollateralType
+						Order by Collateral_key;
+	create temp table   MBSCollatGroup_csr  as
+ select distinct AccountID		
+	from  MBS_Loans.lk_MBSCollateralGroup_key
+	Order By AccountID;
+
+	create temp table CollateralMember_csr 
+				AS Select Distinct CollateralType
+/* End 08/Jan/02 */ 
+				From MBS_Loans.LK_MBSCollateral_key
+				Where AccountID = X_NAccountID
+				Order by CollateralType;
+
+
+
+
+X_start = NOW() as "start time";
+
+/*Begin 08/Jan/02 */
+X_maxkey = max(CollateralGroup_key) from MBS_Loans.lk_MBSCollateralGroup_key;
+/*End 08/Jan/02 */
+
+X_rowcount := 1;
+X_NRecordDt :=  CurrentLoadDt from Dbscrub.TB_MBSLoadDt;
+
+
+begin
+update Dbscrub.tb_HLtrack set trackdtstart = NOW(), trackkey = X_rowcount where id = 29;
+end;
+
+while (X_rowcount <= X_maxkey) LOOP
+begin -- while (X_RecordCount <= X_maxkey)
+
+/* End 08/Jan/02 */
+
+	X_nAccountID := * from MBSCollatGroup_csr;		
+
+	--while (X_X_fetch_status <> -1)
+	begin
+
+		X_NMember :=  Count(*) From MBS_Loans.LK_MBSCollateral_key
+					Where AccountID = X_nAccountID;	
+					
+		X_NGroup :=  Count(Distinct CollateralType) From MBS_Loans.LK_MBSCollateral_key
+					Where AccountID = X_nAccountID;
+
+
+		Begin	 
+			If (Select Max(CollateralGroup) from MBS_Loans.TB_MBSCollateralGroup) IS Null THEN
+				X_NGroup_key := 1;
+			Else 
+create temp table T2 as Select Max(CollateralGroup) MX from MBS_Loans.TB_MBSCollateralGroup;
+				X_NGroup_key := MX + 1 from T2;
+end if;		
+End	;
+
+		X_RecordCount := 1;
+
+end;
+end;
+end loop;
+
+		while (X_RecordCount <= X_NMember) LOOP
+		begin 
+					
+X_NCollateralType := * from CollateralMember_csr;
+
+		--	while (X_X_fetch_status <> -1)
+			begin -- while (X_X_fetch_status <> -1)
+				X_MemberCount := 1;
+
+				X_NSubMember :=  Count(*) From MBS_Loans.LK_MBSCollateral_key
+							Where AccountID = X_nAccountID and CollateralType = X_NCollateralType;	
+end;
+end;
+end loop;
+				while (X_MemberCount <= X_NSubMember) LOOP
+				begin  --while (X_MemberCount <= X_NSubMember)
+					X_NCollateral_key := * from CollateralMemberGroup_csr;
+
+				--	while (X_X_fetch_status <> -1)
+					-- while (X_X_fetch_status <> -1)
+
+						X_varcount = count(*) from MBS_Loans.TB_MBSCollateralGroup
+							where CollateralGroup = X_NGroup_key And Collateral_key = X_NCollateral_key;
+
+						if X_varcount < 1 Then
+						begin	
+						
+							Insert into MBS_Loans.TB_MBSCollateralGroup values (X_NGroup_key, X_NCollateral_key, ((1.0000/X_NSubMember) * (1.0000/X_NGroup)), X_NRecordDt, X_nAccountID);
+						End;
+end if;
+						
+						begin
+							update Dbscrub.tb_HLtrack set trackkey = X_NCollateral_key  , trackHLacctID = X_nAccountID,
+							trackdtend = NOW() where id= 29;
+						end;
+						
+						X_NCollateral_key :=  * from CollateralMemberGroup_csr;
+	
+					 -- while (X_X_fetch_status <> -1)
+			
+
+				X_MemberCount := (X_MemberCount + 1);
+				 --while (X_MemberCount <= X_NSubMember)
+
+				X_NCollateralType:= * from CollateralMember_csr;
+			 -- while (X_X_fetch_status <> -1)
+
+		
+
+X_RecordCount := (X_RecordCount + 1);
+		--	while (X_RecordCount <= X_NMember)
+
+
+		X_nAccountID := * from MBSCollatGroup_csr;		
+
+	
+
+	X_Rowcount := X_maxkey + 1;
+ -- while (X_RecordCount <= X_maxkey)
+
+X_stop = NOW() as "end time";
+end;
+end loop;
+/*
+-- select "EndTime :" = NOW()
+SELECT  extract(hour from X_start);
+SELECT  extract(minute from X_start);
+SELECT extract(second from X_start);
+SELECT extract(hour from X_stop);
+SELECT  extract(minute from X_stop);
+SELECT extract(second from X_stop);
+*/
+END;
+$$
+Language plpgsql;
+

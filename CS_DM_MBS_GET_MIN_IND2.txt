@@ -1,0 +1,71 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 08/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE     or replace FUNCTION CS_DM_MBS_GET_MIN_IND2()
+RETURNS VOID
+
+--@dtCurrentDt DATETIME,
+
+   AS $procedure$
+   DECLARE
+   X_Accountno  VARCHAR(20);
+   X_GoodBadIndHL  NUMERIC;
+   X_INTMIA  INTEGER;
+   X_INTCounter  INTEGER;
+   tb_csr CURSOR
+
+   for SELECT AccountNo,GoodBadIndHL
+
+   FROM TB_CS_DM_PIF_TMP WHERE(SEMProdTyp <> 'CC');
+BEGIN
+
+--SELECT @dtCurrentDt=(SELECT CurrentLoadDt FROM DBScrub..TB_CS_DM_LoadDt)
+
+
+
+   BEGIN
+      OPEN tb_csr;
+      FETCH tb_csr INTO
+      X_Accountno,X_GoodBadIndHL;
+      while(FOUND) loop
+         IF X_GoodBadIndHL IS NULL then
+            SELECT MAX(intMIA) INTO X_INTMIA FROM TB_CS_DM_MBS_GBInd
+            WHERE AccountNo = X_Accountno;
+            IF X_INTMIA <> 3 then
+               SELECT intCounter INTO X_INTCounter FROM TB_CS_DM_MBS_GBInd
+               WHERE AccountNo = X_Accountno AND
+               intMIA = X_INTMIA;
+
+		
+
+		--Get GoodBadIndHL
+
+               SELECT MIN(indicator) INTO X_GoodBadIndHL FROM TB_CS_DM_Indicator
+               WHERE SEMProductType = 'HL' AND
+               X_INTMIA >= previousMIAMin AND
+               X_INTCounter >= preMIACounter AND
+               Portfolio = 'OLD';
+            END IF;
+
+
+	--Update @GoodBadIndHL into TB_CS_DM_PIF_TMP
+
+            UPDATE TB_CS_DM_PIF_TMP
+            SET GoodBadIndHL = X_GoodBadIndHL
+            WHERE AccountNo = X_Accountno AND
+            GoodBadIndHL IS NULL;
+         END IF;
+         FETCH tb_csr INTO
+         X_Accountno,X_GoodBadIndHL;
+      end loop;
+      CLOSE tb_csr;
+
+   END;
+   RETURN;
+END; $procedure$
+LANGUAGE plpgsql;

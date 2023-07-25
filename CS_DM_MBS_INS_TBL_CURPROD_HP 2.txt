@@ -1,0 +1,208 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 09/DEC/2011
+-- Desc: Intial Conversion
+--
+
+SEARCH_PATH TO MBS_LOANS;
+
+
+
+CREATE OR REPLACE FUNCTION CS_DM_MBS_INS_TBL_CURPROD_HP () RETURNS VOID AS $$
+
+
+DECLARE
+
+
+X_RecordType	VARCHAR(2);
+
+X_PeriodOfUpdate	TIMESTAMP;
+
+X_timeKeyMBS INTEGER;
+
+X_dtCurrentDt TIMESTAMP;
+
+
+BEGIN
+
+X_PeriodOfUpdate:=CurrentLoadDt FROM DBScrub.TB_CS_DM_LoadDt;
+
+X_dtCurrentDt:=X_PeriodOfUpdate;
+
+X_timeKeyMBS:= time_key FROM MBS_Loans.TB_MBSTime WHERE TheDate=X_dtCurrentDt;
+
+
+
+--Start insert data
+
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, Start_DateTime)
+
+VALUES (X_PeriodOfUpdate, 'MBS','Start insert records into TB_CS_DM_PIF_TMP', CURRENT_DATE);
+
+
+
+INSERT INTO TB_CS_DM_PIF_TMP
+
+(RecordType, AgreementNo, PRSInd, 
+
+AccountNo, SEMProdTyp, CusNo, CustID, Bal, l_limit, StaffFlg, CusStatus, NPLFlg, ProdType, ClosedDt, WriteOffFlg, 
+
+WriteOffDt, AppDt, AgeOfAcct, PeriodOfUpdate, MonthsInArrears, DelinquencyStatus, RestructuredAccFlg, ArrearsAmt, FraudAccFlgHL, FraudAccFlgHP, DeceasedFlg, FullDisbDt, DisbAmt, 
+
+TagEffectiveDt, AccStatus, RCRSTag, Bankruptcy, ProvisionTag, WriteOffAmt, LoanMaturityDt, TimeKey, ProductKey, StaticAcctNoKey,  
+
+IntSpreadValue, EffectiveRate, PrtyCapInd, ProdCompCode, ProductGroup, ProductClass, AccountRelation, MEPProdTyp, AcctPlmtTag, VIPFlg)
+
+SELECT '01', CASE WHEN i.PRSNo IS NULL THEN b.accountNo ELSE i.PRSNO END AS AgreementNo,
+
+CASE WHEN i.PRSNo IS NULL THEN 'N' ELSE 'Y' END AS PRSInd, 
+
+b.accountNo AS Accountno, 
+
+CASE WHEN g.LoanGroup IN ('RTF', 'RTL', 'RTS', 'RTR', 'RTI', 'UCL') THEN 'HL'
+
+WHEN g.LoanGroup = 'RTC' THEN 'PL'
+
+WHEN g.ProductCode IN ('2301', '2302', '2701', '2702') THEN 'HP'
+
+WHEN g.ProductCode IN ('0072', '0073', '0074') THEN 'AM'
+
+ELSE '99' END AS SEMProdType,
+
+c.customerno AS CusNo, c.customerid AS CustID,
+
+CASE WHEN g.ProductCode IN ('2301', '2302', '2701', '2702') THEN a.BalancePrincipal + a.BalanceInterest ELSE
+
+a.BalancePrincipal + a.BalanceInterest + a.BalanceLPI
+
++ a.BalanceOtherCost1 + a.BalanceOtherCost2 - a.BalanceUnearnedInterest END AS Bal, a.LoanAmount AS l_limit, 
+
+CASE WHEN d.StaffStatus='Y' THEN 'Y' ELSE 'N' END AS StaffFlg,
+
+CASE WHEN b.AccountStatus IN ('LNWD','LNWO') THEN 'WT' 
+
+WHEN f.PlacementTag IN ('LBAS','LBAI') AND f.TagExpiryDt IS NULL THEN 'SF'
+
+WHEN f.PlacementTag ='LNRC' AND f.TagExpiryDt IS NULL THEN 'RT'
+
+WHEN f.PlacementTag IN ('LNRS','LNRL') AND f.TagExpiryDt IS NULL THEN 'RS'
+
+WHEN b.AccountStatus='LNSP' OR (f.PlacementTag IN ('LNTS','LNSA') AND f.TagExpiryDt IS NULL) THEN 'NA'
+
+WHEN f.PlacementTag IN ('LNJA','LLOD','LLSM','LLBN','LLPO','LJDS','LJPD') AND f.TagExpiryDt IS NULL THEN 'LG'
+
+WHEN f.PlacementTag IN ('LNIR','LNRT','LNCG') AND f.TagExpiryDt IS NULL THEN 'RC'
+
+WHEN b.AccountStatus='LNOP' THEN 'AC' 
+
+WHEN b.AccountStatus='LNCL' THEN 'CL' END AS CusStatus,
+
+CASE WHEN b.AccountStatus IN ('LNWO','LNWD','LNSP') OR (f.PlacementTag IN ('LNTS','LNSA','LBAS','LBAI')  AND 
+
+f.TagExpiryDt IS NULL) THEN 'Y' ELSE 'N' END AS NPLFlg, g.ProductCode AS ProdType,         
+
+CASE WHEN b.AccountStatus='LNCL' THEN b.StatusEffectiveDt END AS ClosedDt,
+
+CASE WHEN b.AccountStatus IN ('LNWO','LNWD') OR f.PlacementTag = 'LNWC' THEN 'Y' ELSE 'N' END AS WriteOffFlg,
+
+CASE WHEN b.AccountStatus IN ('LNWO','LNWD') THEN b.StatusEffectiveDt END AS WriteOffDt,
+
+b.OpenDt AS AppDt, DATEDIFF_2('month', b.OpenDt, X_PeriodOfUpdate) AS AgeOfAcct, X_PeriodOfUpdate, (a.CurrentPIA_key -1) AS MIA,
+
+CASE WHEN a.CurrentPIA_key -1=0 THEN '01' WHEN a.CurrentPIA_key -1=1 THEN '02'
+
+WHEN a.CurrentPIA_key -1=2 OR a.CurrentPIA_key -1=3 THEN '03' 
+
+WHEN a.CurrentPIA_key -1=4 OR a.CurrentPIA_key -1=5 THEN '04'
+
+WHEN a.CurrentPIA_key -1>=6 AND a.CurrentPIA_key -1<=8 THEN '05'
+
+WHEN a.CurrentPIA_key -1>=9 AND a.CurrentPIA_key -1<=11 THEN '06'
+
+WHEN a.CurrentPIA_key -1>=12 THEN '07' END AS DelinquencyStatus,
+
+CASE WHEN f.PlacementTag IN ('LNRC','LNER','LNRS','LNRL') AND f.TagExpiryDt IS NULL THEN 'Y' ELSE 'N' END AS RestructuredAccFlg,
+
+a.PrincipalInArrears+a.InterestInArrears+a.LatePaymentInterestInArrears+
+
+a.OtherCost1InArrears+a.OtherCost2InArrears AS ArrearsAmt,
+
+CASE WHEN f.TagReason ='R3' OR f.PlacementTag = 'LFRD' THEN 'Y' ELSE 'N' END AS FraudAccFlgHL,
+CASE WHEN f.TagReason ='R3' OR f.PlacementTag = 'LFRD' THEN 'Y' ELSE 'N' END AS FraudAccFlgHP,
+
+CASE WHEN c.CustomerStatus IN ('DC','DW') OR f.PlacementTag = 'LDEC' THEN 'Y' ELSE 'N' END AS DeceasedFlg,
+
+b.FullDisbDt AS FullDisbDt, b.TotalDisbursementAmount AS DisbAmt,
+
+f.TagEffectiveDt as TagEffectiveDt, b.AccountStatus AS AccStatus, --b.accountID AS AccID,      
+
+CASE WHEN f.PlacementTag IN ('LNRC','LNLR','LNPK','LNRS','LNRL') THEN 'Y' ELSE 'N' END AS RCRSTag,	
+
+CASE WHEN c.CustTag = 'BK' OR f.PlacementTag IN ('LAOR','LPOD','LWUP') THEN 'Y' ELSE 'N' END AS Bankruptcy,
+
+CASE WHEN b.ProvisionTag = 'Y' THEN 'Y' ELSE 'N' END AS ProvisionTag,
+
+j.SubLedgerWriteOffAmountToDt AS WriteOffAmt, b.MaturityDt AS LoanMaturityDt, X_timeKeyMBS,
+
+g.Product_key AS ProductKey, b.StaticAccountNo_key AS StaticAcctNoKey,
+
+h.InterestSpreadValue, CASE WHEN h.InterestRate IS NULL THEN 0 ELSE h.InterestRate * 100 END AS EffectiveRate,
+
+b.PriorityCapIndicator, b.ProdComponentCode, g.ProductGroup, g.ProductClass, c.AccountRelation,
+
+CASE WHEN g.LoanGroup IN ('RTF', 'RTL', 'RTS', 'RTR', 'RTI', 'UCL') THEN 'HL'
+
+WHEN g.LoanGroup = 'RTC' THEN 'PF'
+
+WHEN g.ProductCode IN ('2301', '2302', '2701', '2702') THEN 'HP'
+
+WHEN g.ProductCode IN ('0072', '0073', '0074') THEN 'AM'
+
+ELSE '99' END AS MEPProdType,
+
+f.PlacementTag, CASE WHEN c.CustTag = 'VP' THEN 'Y' ELSE 'N' END AS VIPFlag
+
+
+
+FROM MBS_LOANS.TB_MBSLoan a INNER JOIN
+
+MBS_LOANS.TB_MBSAccountStatic b ON a.StaticAccountNo_key = b.StaticAccountNo_key INNER JOIN
+
+MBS_LOANS.TB_MBSCustomer c ON a.CustomerNo_key = c.CustomerNo_key INNER JOIN
+
+MBS_LOANS.TB_MBSIndividual d ON c.Individual_key = d.Individual_key INNER JOIN
+
+MBS_LOANS.TB_MBSMultiTagGroup e ON a.MultiTagGroup = e.MultiTagGroup INNER JOIN
+
+MBS_LOANS.TB_MBSMultiTag f ON e.MultiTag_key = f.MultiTag_key INNER JOIN
+
+MBS_LOANS.TB_MBSAccountDynamic h ON a.DynamicAccountNo_key = h.DynamicAccountNo_key INNER JOIN
+
+MBS_LOANS.TB_MBSWriteOff j ON a.WriteOff_key = j.WriteOff_key INNER JOIN
+
+MBS_LOANS.TB_MBSProduct g ON a.Product_key = g.Product_key LEFT OUTER JOIN
+
+MBS_LOANS.TB_MBSPRS_key i ON b.AccountNo = i.AccountNo
+
+WHERE a.Time_key= X_timeKeyMBS AND 
+
+(g.ProductCode IN ('2301','2302', '2701','2702','2801')) AND
+
+(b.AccountStatus <> 'LNCL' OR 
+
+	(b.AccountStatus = 'LNCL' AND DATEDIFF_2('year',b.StatusEffectiveDt,X_dtCurrentDt) = 0 AND DATEDIFF_2
+		('month',b.StatusEffectiveDt,X_dtCurrentDt) = 0));
+
+
+
+
+
+INSERT INTO TB_CS_DM_StatusLog (Report_Date, App_Sys_Code, Load_Msg, End_DateTime)
+
+VALUES (X_PeriodOfUpdate, 'MBS','End insert iHP records into TB_CS_DM_PIF_TMP', CURRENT_DATE);
+
+
+
+END ;
+$$
+LANGUAGE PLPGSQL;

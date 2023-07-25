@@ -1,0 +1,592 @@
+set search_path to mbs_loans;
+
+CREATE TABLE tb_mbstime (
+    time_key integer NOT NULL,
+    thedate timestamp without time zone,
+    dayofmonth smallint NOT NULL,
+    weekofmonth smallint NOT NULL,
+    weekofyear smallint NOT NULL,
+    month character varying(9) NOT NULL,
+    quarter smallint NOT NULL,
+    year smallint NOT NULL,
+    holidayflag smallint NOT NULL
+) DISTRIBUTED BY (time_key);
+
+
+
+CREATE TABLE tb_mbsproduct (
+    product_key integer NOT NULL,
+    productcode character varying(4) NOT NULL,
+    producttype character varying(40) NOT NULL,
+    productgroup character varying(2) NOT NULL,
+    productgroupdescription character varying(25),
+    productsupergroup character varying(4) NOT NULL,
+    islamproductindicator character varying(1) NOT NULL,
+    lastupdateflag integer NOT NULL,
+    updatedatetime timestamp without time zone NOT NULL,
+    productclass character varying(20),
+    oldproductcode character varying(4),
+    loangroup character varying(3),
+    loangroupdesc character varying(20)
+) DISTRIBUTED BY (product_key);
+
+
+
+CREATE TABLE tb_cs_dm_pif_tmp (
+    recordtype character varying(2),
+    accountno character varying(20),
+    agreementno character varying(20),
+    semprodtyp character varying(2),
+    cusno character varying(20),
+    custid character varying(20),
+    bal numeric(16,2),
+    l_limit numeric(16,2),
+    ngoodbadind numeric(5,0),
+    ngoodbadflg character varying(1),
+    goodbadindhp numeric(5,0),
+    goodbadflghp character varying(1),
+    goodbadindhl numeric(5,0),
+    goodbadflghl character varying(1),
+    goodbadindcc numeric(5,0),
+    goodbadflgcc character varying(1),
+    staffflg character varying(1),
+    vipflg character varying(1),
+    cusstatus character varying(2),
+    nplflg character varying(1),
+    prodtype character varying(5),
+    closeddt timestamp without time zone,
+    writeoffflg character varying(1),
+    writeoffdt timestamp without time zone,
+    appdt timestamp without time zone,
+    ageofacct numeric(8,0),
+    periodofupdate timestamp without time zone,
+    monthsinarrears numeric(5,0),
+    delinquencystatus character varying(2),
+    restructuredaccflg character varying(1),
+    worstarrearsl12m numeric(5,0),
+    noofdelinquencystatus2l12m numeric(5,0),
+    noofdelinquencystatus3l12m numeric(5,0),
+    arrearsamt numeric(10,0),
+    worstmial3m numeric(5,0),
+    worstmial6m numeric(5,0),
+    worstmial9m numeric(5,0),
+    fraudaccflgall character varying(1),
+    fraudaccflgcc character varying(1),
+    fraudaccflghp character varying(1),
+    fraudaccflghl character varying(1),
+    abadonprojflghl character varying(1),
+    stolenvehicleunderinsclaimhp character varying(1),
+    pifsparenumeric1 numeric(10,0),
+    egoodbadind numeric(10,0),
+    effectiverate numeric(10,0),
+    interestinsupense numeric(10,0),
+    specificprovision numeric(10,0),
+    firstutidisbdt timestamp without time zone,
+    utilisationamt numeric(10,0),
+    writeoffamt numeric(10,0),
+    loanmaturitydt timestamp without time zone,
+    lockinperiod numeric(10,0),
+    pifsparetext1 character varying(8),
+    egoodbadflg character varying(8),
+    pifsparetext3 character varying(8),
+    pifsparetext4 character varying(8),
+    pifsparetext5 character varying(8),
+    pifsparetext6 character varying(8),
+    pifsparetext7 character varying(8),
+    pifsparetext8 character varying(8),
+    pifsparetext9 character varying(8),
+    pifsparetext10 character varying(8),
+    deceasedflg character varying(1),
+    cclostcardflg character varying(1),
+    ccstolencardflg character varying(1),
+    fulldisbdt timestamp without time zone,
+    disbamt numeric(10,0),
+    ageoffirstdisb numeric(10,0),
+    dateofrecovery timestamp without time zone,
+    recoveryamt numeric(10,0),
+    feesincufrmrecovery numeric(10,0),
+    cashadvanceamt numeric(10,0),
+    sparenumeric5 numeric(10,0),
+    sparenumeric6 numeric(10,0),
+    sparenumeric7 numeric(10,0),
+    sparenumeric8 numeric(10,0),
+    sparenumeric9 numeric(10,0),
+    sparenumeric10 numeric(10,0),
+    sparenumeric11 numeric(10,0),
+    sparenumeric12 numeric(10,0),
+    sparenumeric13 numeric(10,0),
+    sparenumeric14 numeric(10,0),
+    sparenumeric15 numeric(10,0),
+    sparetext1 character varying(8),
+    sparetext2 character varying(8),
+    sparetext3 character varying(8),
+    sparetext4 character varying(8),
+    sparetext5 character varying(8),
+    sparetext6 character varying(8),
+    sparetext7 character varying(8),
+    sparetext8 character varying(8),
+    sparetext9 character varying(8),
+    sparetext10 character varying(8),
+    sparetext11 character varying(8),
+    sparetext12 character varying(8),
+    sparetext13 character varying(8),
+    sparetext14 character varying(8),
+    sparetext15 character varying(8),
+    prsind character varying(1),
+    mepprodtyp character varying(2),
+    tageffectivedt timestamp without time zone,
+    cusstatusrank integer,
+    timekey integer,
+    productkey integer,
+    staticacctnokey integer,
+    intspreadvalue numeric(7,4),
+    prtycapind character varying(1),
+    prodcompcode character varying(4),
+    cycleday character varying(2),
+    productgroup character varying(2),
+    productclass character varying(20),
+    strvipcode character varying(1),
+    strresidentstatus character varying(1),
+    strstatus1 character varying(2),
+    strstatus2 character varying(2),
+    strwriteoffind character varying(1),
+    strfdindicator character varying(1),
+    litigationcd character varying(3),
+    accstatus character varying(5),
+    provisiontag character varying(1),
+    rcrstag character varying(1),
+    bankruptcy character varying(1),
+    accountrelation character varying(2),
+    acctplmttag character varying(4)
+) DISTRIBUTED BY (agreementno);
+
+
+
+CREATE TABLE tb_cs_dm_bal_mep (
+    accountno character varying(20),
+    intbalance numeric(18,2),
+    intbalcounter integer,
+    intcounter integer
+) DISTRIBUTED BY (accountno);
+
+
+
+CREATE TABLE tb_mbsaccountstatic (
+    staticaccountno_key integer NOT NULL,
+    accountid numeric(9,0) NOT NULL,
+    accountno character varying(13) NOT NULL,
+    productsupergroup character varying(4) NOT NULL,
+    productgroup character varying(2) NOT NULL,
+    productcd character varying(4) NOT NULL,
+    branchcd character varying(4) NOT NULL,
+    accounttype character varying(2) NOT NULL,
+    accountstatus character varying(4) NOT NULL,
+    accountstatusreason character varying(4),
+    statuseffectivedt timestamp without time zone NOT NULL,
+    accounttagcount integer,
+    opendt timestamp without time zone NOT NULL,
+    closeddt timestamp without time zone,
+    loanperiod character varying(4) NOT NULL,
+    repaymentfrequency character varying(4) NOT NULL,
+    prioritycapindicator character varying(1) NOT NULL,
+    productcapindicator character varying(1) NOT NULL,
+    commitmentfeechargeindicator character varying(1) NOT NULL,
+    productcapexpirydt timestamp without time zone,
+    graceperiod character varying(4),
+    purposecd character varying(6) NOT NULL,
+    sectorialcd character varying(6) NOT NULL,
+    facilitytype character varying(5) NOT NULL,
+    loanutilisationstatecd character varying(4) NOT NULL,
+    smiindicator character varying(1) NOT NULL,
+    loanamount numeric(15,2),
+    installmentamount numeric(13,2),
+    finalinstallmentamount numeric(13,2),
+    totalloanperiod character varying(4) NOT NULL,
+    loancancellationamount numeric(13,2),
+    loanincreasedamount numeric(13,2),
+    periodinarrearsunit character varying(1) NOT NULL,
+    loanperiodtodate numeric(3,0),
+    totaldisbursementamount numeric(13,2),
+    maturitydt timestamp without time zone,
+    lastupdateflag integer NOT NULL,
+    updatedatetime timestamp without time zone NOT NULL,
+    schemetype character varying(2) NOT NULL,
+    lastpaymentdate timestamp without time zone,
+    origbrchcd character varying(4),
+    fulldisbdt timestamp without time zone,
+    mktby character varying(15),
+    idtype character varying(2),
+    idno character varying(20),
+    blckno character varying(12),
+    agrmtno character varying(30),
+    totalunchargeprincipal numeric(13,2),
+    prodcomponentcode character varying(4),
+    repaymenttype character varying(4),
+    provisiontag character varying(1),
+    imacctno character varying(13),
+    imacctbal character varying(15)
+) DISTRIBUTED BY (accountid);
+
+
+CREATE TABLE tb_mbsloan (
+    time_key integer NOT NULL,
+    product_key integer NOT NULL,
+    branchcd_key integer NOT NULL,
+    dynamicaccountno_key integer NOT NULL,
+    staticaccountno_key integer NOT NULL,
+    customerno_key integer NOT NULL,
+    writeoff_key integer NOT NULL,
+    suspension_key integer NOT NULL,
+    loccollection_key integer NOT NULL,
+    settlement_key integer NOT NULL,
+    cagamas_key integer NOT NULL,
+    repaymentschedule_key integer NOT NULL,
+    customergroup integer NOT NULL,
+    collateralgroup integer NOT NULL,
+    thirdpartygroup integer NOT NULL,
+    multitaggroup integer NOT NULL,
+    status_key integer NOT NULL,
+    principalpia_key integer NOT NULL,
+    interestpia_key integer NOT NULL,
+    latepaymentinterestpia_key integer NOT NULL,
+    othercost1pia_key integer NOT NULL,
+    othercost2pia_key integer NOT NULL,
+    iisforinterestpia_key integer NOT NULL,
+    iisforlpipia_key integer NOT NULL,
+    loanamount numeric(15,2),
+    interestaccrued numeric(13,2) NOT NULL,
+    ytdineterestaccrued numeric(13,2),
+    interestaccumulated numeric(17,4),
+    principalinarrears numeric(13,2) NOT NULL,
+    interestinarrears numeric(13,2) NOT NULL,
+    latepaymentinterestinarrears numeric(13,2) NOT NULL,
+    othercost1inarrears numeric(13,2) NOT NULL,
+    othercost2inarrears numeric(13,2) NOT NULL,
+    iisforinterstinarrears numeric(13,2) NOT NULL,
+    iisforlpiinarrears numeric(13,2) NOT NULL,
+    balanceprincipal numeric(15,2),
+    balanceinterest numeric(15,2),
+    balancelpi numeric(15,2),
+    balanceothercost1 numeric(15,2),
+    balanceothercost2 numeric(13,2) NOT NULL,
+    balanceinterestclawback numeric(13,2) NOT NULL,
+    balancelpiclawback numeric(13,2) NOT NULL,
+    balanceiis numeric(13,2) NOT NULL,
+    balanceiislpi numeric(13,2) NOT NULL,
+    balanceunearnedinterest numeric(13,2) NOT NULL,
+    repayment numeric(13,2),
+    repaymentprincipal numeric(13,2),
+    repaymentinterest numeric(13,2),
+    previousstatus_key integer NOT NULL,
+    previousprincipalpia_key integer NOT NULL,
+    previousinterestpia_key integer NOT NULL,
+    previouslpipia_key integer NOT NULL,
+    previouspia_key integer NOT NULL,
+    currentpia_key integer NOT NULL,
+    clawbackiis numeric(15,2),
+    koprincipal numeric(13,2),
+    kointerest numeric(13,2),
+    kolatepaymentinterest numeric(13,2),
+    koothercost1 numeric(13,2),
+    koothercost2 numeric(13,2),
+    minimumrepayment numeric(15,2),
+    monthendtotaldisbursement numeric(15,2),
+    balanceunappliedamount numeric(13,2),
+    koreversal numeric(13,2),
+    lastpaymentamount numeric(13,2),
+    repaymentlatepaymentinterest numeric(13,2),
+    repaymentothercost1 numeric(13,2),
+    repaymentothercost2 numeric(13,2),
+    mtdinterestaccrued numeric(13,2),
+    mtdlpiaccrued numeric(13,2),
+    lastpaymentdate timestamp without time zone,
+    currmthpayamt numeric(13,2)
+) DISTRIBUTED BY (iisforlpipia_key);
+
+
+
+CREATE TABLE tb_cs_dm_indicator (
+    indicator integer NOT NULL,
+    flg character(1),
+    description character varying(120),
+    currentmiamin integer,
+    currentmiamax integer,
+    previousmiamin integer,
+    previousmiamax integer,
+    premiacounter integer,
+    semproducttype character varying(2) NOT NULL,
+    portfolio character varying(3)
+) DISTRIBUTED BY (indicator);
+
+
+
+
+CREATE TABLE tb_cs_dm_tmp1 (
+    accountno character varying(13),
+    noofdlqsts2l12m integer
+) DISTRIBUTED BY (noofdlqsts2l12m);
+
+
+
+
+CREATE TABLE tb_cs_dm_tmp2 (
+    accountno character varying(13),
+    noofdlqsts3l12m integer
+) DISTRIBUTED BY (accountno);
+
+
+
+
+CREATE TABLE tb_cs_dm_tmp3 (
+    accountno character varying(13),
+    maxmial12m integer
+) DISTRIBUTED BY (accountno);
+
+
+
+CREATE TABLE tb_cs_dm_tmp4 (
+    accountno character varying(13),
+    maxmial3m integer
+) DISTRIBUTED BY (accountno);
+
+
+
+
+CREATE TABLE tb_cs_dm_tmp5 (
+    accountno character varying(13),
+    maxmial6m integer
+) DISTRIBUTED BY (accountno);
+
+
+
+
+CREATE TABLE tb_cs_dm_tmp6 (
+    accountno character varying(13),
+    maxmial9m integer
+) DISTRIBUTED BY (accountno);
+
+
+
+
+CREATE TABLE tb_cs_dm_tmp_dist_gbind (
+    accountno character varying(13),
+    intmia integer,
+    intcounter integer
+) DISTRIBUTED BY (accountno);
+
+
+
+
+CREATE TABLE tb_cs_dm_tmp_dist_gbind2 (
+    accountno character varying(13),
+    intmia integer,
+    intcounter integer,
+    monthsinarrears numeric(5,0)
+) DISTRIBUTED BY (accountno);
+
+
+
+CREATE TABLE tb_cs_dm_tmp_gbind (
+    accountno character varying(20),
+    intmia integer,
+    intcounter integer
+) DISTRIBUTED BY (accountno);
+
+
+
+CREATE TABLE tb_cs_dm_tmp_maxmia2 (
+    accountno character varying(13),
+    maxmia integer
+) DISTRIBUTED BY (accountno);
+
+
+
+
+CREATE TABLE tb_cs_dm_tmp_minindicator (
+    accountno character varying(13),
+    minindicator integer
+) DISTRIBUTED BY (accountno);
+
+
+
+
+CREATE TABLE tb_mbscustomer (
+    customerno_key integer NOT NULL,
+    individual_key integer NOT NULL,
+    organisation_key integer NOT NULL,
+    customerno character varying(8) NOT NULL,
+    accountid numeric(9,0),
+    accountno character varying(13),
+    addressno numeric(2,0),
+    accountname character varying(25),
+    customername character varying(50),
+    customerid character varying(20),
+    customeridtype character varying(2),
+    abbreviatedname character varying(25),
+    productcd character varying(4),
+    accountrelation character varying(2),
+    customertype character varying(1),
+    customerclassification character varying(1),
+    residentstatus character varying(1),
+    bumiputrastatus character varying(1),
+    staffrateentitlement character varying(1),
+    customerstatus character varying(2),
+    customerstatusreason character varying(2),
+    creationdt timestamp without time zone,
+    domicilebranchcd character varying(4),
+    badpaymastercounter numeric(2,0),
+    addresstype character varying(2),
+    ownership character varying(1),
+    streetline1 character varying(40),
+    streetline2 character varying(40),
+    streetline3 character varying(40),
+    town character varying(20),
+    state character varying(20),
+    country character varying(20),
+    postcode character varying(5),
+    telephone character varying(20),
+    telephone2 character varying(20),
+    lastupdateflag integer NOT NULL,
+    updatedatetime timestamp without time zone NOT NULL,
+    streetline4 character varying(40),
+    officeaddr1 character varying(30),
+    officeaddr2 character varying(30),
+    officeaddr3 character varying(30),
+    officeaddr4 character varying(40),
+    officepostcode character varying(5),
+    officetown character varying(20),
+    officestatecode character varying(20),
+    handphoneno character varying(20),
+    custtag character varying(2),
+    petronas_key integer,
+    tageffectivedt timestamp without time zone,
+    tagexpirydt timestamp without time zone
+) DISTRIBUTED BY (accountid);
+
+
+
+
+CREATE TABLE tb_mbsindividual (
+    individual_key integer NOT NULL,
+    customerno character varying(8) NOT NULL,
+    title character varying(2) NOT NULL,
+    nationality character varying(2) NOT NULL,
+    race character varying(2),
+    religion character varying(2) NOT NULL,
+    preferredspokenlanguage character varying(2),
+    gender character varying(1) NOT NULL,
+    birthdate timestamp without time zone,
+    maritalstatus character varying(2) NOT NULL,
+    noofdepedants numeric(2,0),
+    staffstatus character varying(1),
+    mbfcompanycode character varying(4),
+    staffcode character varying(8),
+    profession character varying(4),
+    employer character varying(40),
+    natureofbiz character varying(4),
+    designation character varying(2),
+    employmentdt timestamp without time zone,
+    annualincometype character varying(2),
+    annualincomerange character varying(2),
+    actualannualincome numeric(13,2),
+    incomeeffectivedt timestamp without time zone,
+    hobby character varying(2),
+    lastupdateflag integer NOT NULL,
+    updatedatetime timestamp without time zone NOT NULL,
+    accountno character varying(13)
+) DISTRIBUTED BY (accountno);
+
+
+
+
+CREATE TABLE tb_mbswriteoff (
+    writeoff_key integer NOT NULL,
+    accountid numeric(9,0) NOT NULL,
+    accountno character varying(13) NOT NULL,
+    subledgerprincipal numeric(15,2),
+    subledgerinterest numeric(15,2),
+    subledgerlatepaymentinterest numeric(15,2),
+    subledgerothercost1 numeric(15,2),
+    subledgerothercost2 numeric(13,2),
+    subledgerinterestclawback numeric(15,2),
+    subledgerlpiclawback numeric(13,2),
+    subledgeriisinterest numeric(15,2),
+    subledgeriislpi numeric(15,2),
+    subledgerwriteoffamounttodt numeric(15,2),
+    lastupdateflag integer NOT NULL,
+    updatedatetime timestamp without time zone NOT NULL
+) DISTRIBUTED BY (accountno);
+
+
+
+
+CREATE TABLE tb_mcsaccountinfo (
+    accountinfo_key integer NOT NULL,
+    accountno character varying(13) NOT NULL,
+    cardno character varying(16) NOT NULL,
+    status1 character varying(1),
+    status2 character varying(1),
+    status1effectivedt timestamp without time zone,
+    accounttype character varying(1),
+    cardtype character varying(1),
+    locindicator character varying(1),
+    reprieveindicator character varying(1),
+    vipcode character varying(1),
+    litigationcode character varying(3),
+    bnmclasscode character varying(1),
+    fdindicator character varying(1),
+    fdstatus character varying(1),
+    fdindicatordt timestamp without time zone,
+    creditlimit numeric(15,2),
+    bookloc numeric(15,2),
+    spendinglimit numeric(15,2),
+    activityindicator character varying(1),
+    lastpaymentdt timestamp without time zone,
+    autoupgradedt timestamp without time zone,
+    lastupdateflag integer NOT NULL,
+    updatedatetime timestamp without time zone NOT NULL,
+    productcomponentcode character varying(4),
+    collectind character varying(1),
+    cycleday character varying(2),
+    litigationdate timestamp without time zone
+) DISTRIBUTED BY (cardno);
+
+
+
+
+CREATE TABLE tb_mcsloaninfo (
+    time_key integer NOT NULL,
+    staticaccountno_key integer NOT NULL,
+    accountinfo_key integer NOT NULL,
+    individualinfo_key integer NOT NULL,
+    writeoffinfo_key integer NOT NULL,
+    status1_key integer NOT NULL,
+    status2_key integer NOT NULL,
+    previousstatus_key integer NOT NULL,
+    cashadvanceinterestosamount numeric(15,2),
+    cashadvanceamount numeric(15,2),
+    chequefloatamount numeric(15,2),
+    sygcustomergroup integer NOT NULL,
+    card_key integer,
+    cardgroup integer,
+    productcomponent_key integer,
+    eppunbilledamount numeric(15,2),
+    currentmonthretail numeric(15,2),
+    ch_mthpymt numeric(13,2)
+) DISTRIBUTED BY (time_key);
+
+
+
+
+CREATE TABLE tb_mcswriteoffinfo (
+    writeoffinfo_key integer NOT NULL,
+    accountno character varying(13) NOT NULL,
+    writeoffindicator character varying(1),
+    writeoffdt timestamp without time zone,
+    writeoffamount numeric(15,2),
+    writeoffiisamount numeric(15,2),
+    writeoffrecoveryamount numeric(15,2),
+    lastupdateflag integer NOT NULL,
+    updatedatetime timestamp without time zone NOT NULL
+) DISTRIBUTED BY (writeoffinfo_key);
+

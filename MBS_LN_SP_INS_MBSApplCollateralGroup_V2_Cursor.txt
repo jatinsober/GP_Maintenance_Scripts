@@ -1,0 +1,137 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 5/JAN/2012
+-- Desc: Intial Conversion
+--
+-- Dev: Jitendra Lodwal
+-- Date: 27/MARCH/2012
+-- Desc: Intial Conversion
+--
+-- Dev: Jitendra Lodwal
+-- Date: 28/MARCH/2012
+-- Desc: Intial Conversion
+--
+CREATE OR REPLACE FUNCTION MBS_LN_SP_INS_MBSApplCollateralGroup() RETURNS VOID AS $$
+
+DECLARE X_nAccount_key integer;
+ X_nAccountID numeric(9); 
+ X_nAccountNo varchar(13); 
+ X_NCollateral_key integer;
+ X_NCollateralType varchar(2);
+ X_start TIMESTAMP;
+ X_stop TIMESTAMP;
+ X_printline char (50);
+ X_maxkey integer;
+ X_rowcount integer;
+ X_Recordcount integer;
+ X_Membercount integer;
+ X_varcount integer;
+ X_Exists integer;
+ X_NGroup_key integer;
+ X_NMember Numeric(2);
+ X_NGroup Numeric(2);
+ X_NsubMember Numeric(2);
+ X_NWeightFactor Numeric (4,2) ;
+ X_NRecordDt TIMESTAMP;
+
+BEGIN
+X_start := LOCALTIMESTAMP;
+X_maxkey := MAX(ApplCollat_key) FROM DBScrub.TB_MBSApplCollateral;
+X_rowcount := 1;
+X_NRecordDt := CurrentLoadDt FROM DBScrub.TB_MBSLoadDt;
+
+WHILE (X_rowcount <= X_maxkey) LOOP
+
+DECLARE MBSApplCollatGrp_Csr CURSOR
+ FOR SELECT DISTINCT AccountID 
+ FROM DBScrub.TB_MBSApplCollateral
+ WHERE CollateralID IN (SELECT CollateralID FROM MBS_Loans.lk_MBSApplCollateral_key) 
+ GROUP BY AccountID
+ ORDER BY AccountID;
+
+-- -- OPEN MBSApplCollatGrp_Csr;
+BEGIN
+FETCH MBSApplCollatGrp_Csr into X_nAccountID ; 
+
+ --WHILE (X_X_fetch_status <> -1)
+X_NMember := COUNT(*) FROM DBScrub.TB_MBSApplCollateral
+ WHERE AccountID = X_nAccountID; 
+X_NGroup := COUNT(DISTINCT CollateralType) FROM DBScrub.TB_MBSApplCollateral
+ WHERE AccountID = X_nAccountID ;
+
+ IF (SELECT MAX(CollateralGroup) FROM  MBS_Loans.TB_MBSApplicationCollateralGroup) IS Null THEN
+ SELECT X_NGroup_key = 1;
+ ELSE 
+ SELECT X_NGroup_key = ((SELECT MAX(CollateralGroup) FROM  MBS_Loans.TB_MBSApplicationCollateralGroup) + 1);
+END IF;
+
+BEGIN
+ DECLARE ApplCollateralMember_csr CURSOR
+ FOR SELECT DISTINCT CollateralType 
+ FROM DBScrub.TB_MBSApplCollateral
+ WHERE AccountID = X_NAccountID
+ ORDER BY CollateralType;
+
+ -- -- OPEN ApplCollateralMember_csr;
+BEGIN
+ FETCH ApplCollateralMember_csr INTO X_NCollateralType;
+
+--WHILE (X_X_fetch_status <> -1)
+
+ X_MemberCount := 1;
+ X_NSubMember := COUNT(*) FROM DBScrub.TB_MBSApplCollateral
+ WHERE AccountID = X_nAccountID AND CollateralType = X_NCollateralType; 
+
+ WHILE (X_MemberCount <= X_NSubMember) LOOP
+ BEGIN 
+ DECLARE ApplCollatMbrGrp_csr cursor
+ FOR SELECT Collateral_key
+ FROM  MBS_Loans.lk_MBSApplCollateral_key
+ WHERE CollateralID IN (SELECT DISTINCT CollateralID FROM DBScrub.TB_MBSApplCollateral 
+ WHERE AccountId = X_NAccountID AND CollateralType = X_NCollateralType )
+ ORDER BY Collateral_key;
+
+ -- -- OPEN ApplCollatMbrGrp_csr;
+BEGIN
+ FETCH ApplCollatMbrGrp_csr INTO X_NCollateral_key;
+
+-- WHILE (X_X_fetch_status <> -1)
+BEGIN
+X_varcount := COUNT(*) FROM  MBS_Loans.TB_MBSApplicationCollateralGroup
+WHERE CollateralGroup = X_NGroup_key AND Collateral_key = X_NCollateral_key;
+SELECT X_NMember, X_NGroup, X_Exists, X_NGroup_key, X_NSubmember, X_NCollateral_key, X_varcount;
+IF X_varcount < 1 THEN
+BEGIN 
+INSERT INTO  MBS_Loans.TB_MBSApplicationCollateralGroup VALUES (X_NGroup_key, 
+X_NCollateral_key, ((1.0/X_NSubMember) * (1.0/X_NGroup)), X_NRecordDt, X_NAccountID);
+END;
+END IF;
+X_MemberCount := X_MemberCount + 1;
+FETCH ApplCollatMbrGrp_csr INTO X_NCollateral_key;
+END; 
+
+ CLOSE ApplCollatMbrGrp_csr;
+ --DEALLOCATE ApplCollatMbrGrp_csr;
+END;
+--END;
+FETCH ApplCollateralMember_csr INTO X_NCollateralType;
+END;
+END LOOP; -- WHILE (X_MemberCount <= X_NSubMember)
+
+
+CLOSE ApplCollateralMember_csr;
+--DEALLOCATE ApplCollateralMember_csr;
+FETCH MBSApplCollatGrp_Csr INTO X_nAccountID;
+END;
+END;
+
+-- -- OPEN
+ CLOSE MBSApplCollatGrp_Csr;
+ --DEALLOCATE MBSApplCollatGrp_Csr;
+ X_rowcount := X_Maxkey + 1;
+
+END;
+END LOOP;
+
+end; 
+$$ language plpgsql;
