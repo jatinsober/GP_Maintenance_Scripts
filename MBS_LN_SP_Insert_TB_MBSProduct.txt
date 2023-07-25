@@ -1,0 +1,142 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 02/JAN/2012
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO DBSCRUB;
+
+CREATE  OR REPLACE FUNCTION dbscrub.MBS_LN_SP_Insert_TB_MBSProduct  (X_NProductCode varchar (4) 
+	,X_NProductType varchar (25)
+	,X_NProductGroup varchar (2)
+	,X_NProductSuperGroup varchar (4) 
+	--,X_NProductGroupDescription varchar (25)
+	,X_NIslamProductIndicator varchar (1)
+	,X_NProductClass  varchar(20)
+	,X_NOldProductCode varchar(4)
+	,X_nLastUpdateFlag			int
+	,X_nUpdateDateTime			TIMESTAMP
+	,X_nLoanGroup		varchar(3) 
+	,X_nLoanGroupDesc	varchar(20) )
+RETURNS VOID AS $$
+
+
+declare	X_oldProductCode varchar (4) ;
+	X_oldProductType varchar (25);
+	X_oldProductGroup varchar (2);
+	X_oldProductGroupDescription varchar (25);
+	X_nProductGroupDescription varchar (25);
+	X_oldProductSuperGroup varchar (4) ;
+	X_oldIslamProductIndicator varchar (1);
+	X_oldProductClass  varchar(20);
+	X_oldOldProductCode varchar(4);	
+	X_oldLastUpdateFlag			int;
+	X_oldUpdateDateTime			TIMESTAMP;
+	X_varcount int;
+	X_oldLoanGroup		varchar(3);
+
+
+BEGIN
+
+/****  NBL 	Begin	 6/July/2001    ****/  
+	X_varcount :=  count(*) from MBS_Loans.TB_MBSProduct 
+			where ProductCode = X_nProductCode And LastUpdateFlag = 1;
+
+	X_nProductGroupDescription :=  Description from MBS_Loans.LK_ProductGroup_key
+			where ProductGroup = X_nProductGroup;
+
+/****  NBL 	End 	6/July/2001    ****/  
+
+		if X_varcount > 0 then
+			  X_oldProductGroup 		:= ProductGroup from MBS_Loans.TB_MBSProduct where ProductCode = X_nProductCode  and LastUpdateFlag = 1;
+				X_oldProductGroupDescription 	:= ProductGroupDescription  from MBS_Loans.TB_MBSProduct where ProductCode = X_nProductCode  and LastUpdateFlag = 1;
+				X_oldProductSuperGroup		:= ProductSuperGroup from MBS_Loans.TB_MBSProduct where ProductCode = X_nProductCode  and LastUpdateFlag = 1;
+				X_oldIslamProductIndicator	:= IslamProductIndicator from MBS_Loans.TB_MBSProduct where ProductCode = X_nProductCode  and LastUpdateFlag = 1;
+				X_oldProductClass  		:= ProductClass from MBS_Loans.TB_MBSProduct where ProductCode = X_nProductCode  and LastUpdateFlag = 1;
+				X_oldOldProductCode 		:= OldProductCode from MBS_Loans.TB_MBSProduct where ProductCode = X_nProductCode  and LastUpdateFlag = 1;
+				X_oldProductType		:= ProductType	 from MBS_Loans.TB_MBSProduct where ProductCode = X_nProductCode  and LastUpdateFlag = 1;
+				X_oldLoanGroup			:= LoanGroup from MBS_Loans.TB_MBSProduct where ProductCode = X_nProductCode  and LastUpdateFlag = 1;
+			
+			if	(X_oldProductGroup			<> X_nProductGroup) OR
+				(X_oldProductSuperGroup		<> X_nProductSuperGroup) OR
+/****  NBL 	Begin	 6/July/2001    ****/  
+---				(X_oldIslamProductIndicator		<> X_nIslamProductIndicator) 
+				(X_oldProductGroupDescription		<> X_nProductGroupDescription)  OR
+				(X_oldIslamProductIndicator		<> X_nIslamProductIndicator)  OR
+				(X_oldProductClass                       <> X_nProductClass) OR
+				(X_oldOldProductCode                     <> X_nOldProductCode) OR
+				(X_oldProductType			<> X_nProductType) OR
+				(X_oldLoanGroup				<> X_nLoanGroup) THEN
+
+				update MBS_Loans.TB_MBSProduct
+				set LastUpdateFlag = 0
+				where ProductCode = X_nProductCode			and LastUpdateFlag = 1;
+
+				insert into MBS_Loans.TB_MBSProduct
+					(Product_key
+					,ProductCode
+					,ProductType
+					,ProductGroup
+					,ProductGroupDescription
+					,ProductSuperGroup
+					,IslamProductIndicator
+					,ProductClass 
+					,OldProductCode 	
+					,LastUpdateFlag
+					,UpdateDateTime
+					,LoanGroup
+					,LoanGroupDesc)
+				values
+					(nextval('seq_tb_mbsproduct')
+					,X_nProductCode
+					,X_nProductType
+					,X_nProductGroup
+					,X_nProductGroupDescription
+					,X_nProductSuperGroup
+					,X_NIslamProductIndicator
+					,X_NProductClass  
+					,X_NOldProductCode
+					,X_nLastUpdateFlag
+					,X_nUpdateDateTime
+					,X_nLoanGroup
+					,X_nLoanGroupDesc);
+				
+			end if;
+		end if;
+
+		if X_varcount = 0 THEN
+		
+			
+				insert into MBS_Loans.TB_MBSProduct
+					(Product_Key,ProductCode
+					,ProductType
+					,ProductGroup
+					,ProductGroupDescription
+					,ProductSuperGroup
+					,IslamProductIndicator
+					,ProductClass 
+					,OldProductCode 
+					,LastUpdateFlag
+					,UpdateDateTime
+					,LoanGroup
+					,LoanGroupDesc)
+				values
+					(nextval('seq_tb_mbsproduct'),X_nProductCode
+					,X_nProductType
+					,X_nProductGroup
+					,X_nProductGroupDescription
+					,X_nProductSuperGroup
+					,X_NIslamProductIndicator
+					,X_NProductClass 
+					,X_NOldProductCode
+					,X_nLastUpdateFlag
+					,X_nUpdateDateTime
+					,X_nLoanGroup
+					,X_nLoanGroupDesc);
+end if;
+			
+END;
+
+$$
+Language Plpgsql;
+

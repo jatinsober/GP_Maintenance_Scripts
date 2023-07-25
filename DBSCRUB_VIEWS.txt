@@ -1,0 +1,58 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 29-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO DBSCRUB;
+
+CREATE OR REPLACE VIEW dbscrub.TB_MBSTime
+AS
+SELECT *
+FROM MBS_Loans.TB_MBSTime;
+
+CREATE OR REPLACE VIEW dbscrub.TB_MCSBranch
+AS
+SELECT *
+FROM MBS_Loans.TB_MBSBranch;
+
+
+CREATE OR REPLACE VIEW dbscrub.VW_CustTag_Final
+AS
+SELECT     dbscrub.VW_DIST_TagEffDt.CustNo, dbscrub.VW_DIST_TblCustTag.CustTag, dbscrub.VW_DIST_TagEffDt.TagEffDt, dbscrub.VW_DIST_TagEffDt.LastUpdateFlag
+FROM         dbscrub.VW_DIST_TblCustTag INNER JOIN
+                      dbscrub.VW_DIST_TagEffDt ON dbscrub.VW_DIST_TblCustTag.CustNo = dbscrub.VW_DIST_TagEffDt.CustNo AND 
+                      dbscrub.VW_DIST_TblCustTag.TagEffDt = dbscrub.VW_DIST_TagEffDt.TagEffDt;
+
+
+
+CREATE OR REPLACE VIEW dbscrub.VW_DIST_TagEffDt
+AS
+SELECT     CustNo, MAX(TagEffectiveDt) AS TagEffDt, LastUpdateFlag
+FROM         dbscrub.TB_MBSCustTag
+WHERE     (TagExpiryDt IS NULL) AND (CustTag IN ('BK', 'VP')) OR
+                      (TagExpiryDt > UpdateDateTime) AND (CustTag IN ('BK', 'VP'))
+GROUP BY CustNo, LastUpdateFlag;
+
+
+
+CREATE OR REPLACE VIEW dbscrub.VW_DIST_TagExpiryDt
+AS
+SELECT     CustNo, MAX(TagEffectiveDt) AS TagEffDt, MAX(TagExpiryDt) AS TagExpDt, LastUpdateFlag
+FROM         dbscrub.TB_MBSCustTag
+WHERE     (TagExpiryDt < UpdateDateTime) AND (NOT (CustNo IN
+                          (SELECT     custno
+                            FROM          VW_DIST_TagEffDt))) AND (CustTag IN ('BK', 'VP'))
+GROUP BY CustNo, LastUpdateFlag;
+
+
+
+CREATE OR REPLACE VIEW dbscrub.VW_DIST_TblCustTag
+AS
+SELECT     CustNo, CustTag, MAX(TagEffectiveDt) AS TagEffDt, TagExpiryDt, LastUpdateFlag
+FROM         dbscrub.TB_MBSCustTag
+WHERE     (TagExpiryDt IS NULL) OR
+                      (TagExpiryDt > UpdateDateTime)
+GROUP BY CustNo, CustTag, TagExpiryDt, LastUpdateFlag
+HAVING      (CustTag IN ('BK', 'VP'));
+

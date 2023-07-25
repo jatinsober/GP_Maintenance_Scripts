@@ -1,0 +1,47 @@
+SET SEARCH_PATH TO DBSCRUB;
+CREATE OR REPLACE FUNCTION dbscrub.MBS_LN_SP_INS_TB_MBSProduct() RETURNS VOID AS $$
+
+--
+-- Dev : Jitendra Lodwal
+-- Date: 02/04/2012
+-- Desc: Got rid of the use of loops to improve the performance. 
+--
+
+BEGIN
+
+/* Flagging any pre-existing Branch records where any of the columns have updated values */
+	BEGIN
+		UPDATE MBS_Loans.TB_MBSProduct T1
+		SET LASTUPDATEFLAG = 0
+		FROM DBSCRUB.TB_MBSProduct T2
+		WHERE T1.ProductCode = T2.ProductCode AND T1.ProductType = 1
+		AND T2.ProductCode <> T1.ProductCode
+		OR T2.ProductType <> T1.ProductType
+		OR T2.ProductGroup <> T1.ProductGroup
+		--OR T2.ProductGroupDescription <> T1.ProductGroupDescription
+		OR T2.ProductSuperGroup <> T1.ProductSuperGroup
+		OR T2.IslamProductIndicator <> T1.IslamProductIndicator
+		OR T2.LastUpdateFlag <> T1.LastUpdateFlag
+		OR T2.UpdateDateTime <> T1.UpdateDateTime
+		OR T2.LoanGroup <> T1.LoanGroup
+		OR T2.LoanGroupDesc <> T1.LoanGroupDesc;
+
+	END;
+
+
+/* Inserting fresh records for new Branch Codes as well as  modified data for existing Branch Codes */
+	BEGIN
+		INSERT INTO MBS_Loans.TB_MBSProduct
+		(product_key, ProductCode, ProductType, ProductGroup,ProductSuperGroup
+		, IslamProductIndicator, LastUpdateFlag, UpdateDateTime, LoanGroup, LoanGroupDesc)
+		SELECT
+		  nextval('seq_tb_mbsproduct'),ProductCode, ProductType, ProductGroup,ProductSuperGroup
+		, IslamProductIndicator, LastUpdateFlag, UpdateDateTime, LoanGroup, LoanGroupDesc
+		FROM DBSCRUB.TB_MBSProduct;
+	END;
+	
+END; 
+$$
+
+LANGUAGE plpgsql;
+

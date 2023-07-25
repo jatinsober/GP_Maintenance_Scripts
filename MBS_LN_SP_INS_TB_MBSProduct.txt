@@ -1,0 +1,79 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 02/JAN/2012
+-- Desc: Intial Conversion
+--
+
+SET SEARCH_PATH TO DBSCRUB;
+
+CREATE  OR REPLACE FUNCTION dbscrub.MBS_LN_SP_INS_TB_MBSProduct () RETURNS VOID AS $$
+--- NBL  22/Apr/2002  To add in Product Class and OldProductCode into TB_MBSProduct.
+
+declare X_NProduct_key int ;
+	X_NProductCode varchar (4) ;
+	X_NProductType varchar (25);
+	X_NProductGroup varchar (2);
+	X_NProductSuperGroup varchar (4) ;
+	X_NIslamProductIndicator varchar (1);
+	X_NProductClass  varchar(20);
+	X_NOldProductCode varchar(4);
+	X_NLastUpdateFlag	int ;
+	X_NUpdateDateTime 	timestamp;
+	X_NLoanGroup	varchar(3);
+	X_NLoanGroupDesc	varchar(20);
+	X_start timestamp;
+	X_stop timestamp;
+	X_printline char (50);
+	X_maxkey int;
+	X_rowcount int;
+BEGIN
+
+X_maxkey := max(Product_key) from DBScrub.TB_MBSProduct;
+X_rowcount := 1;
+
+CREATE TEMP TABLE TBMBSProd_csr_temp AS select ProductCode
+			,ProductType
+			,ProductGroup
+			,ProductSuperGroup
+			,IslamProductIndicator
+			,ProductClass  
+			,OldProductCode
+ 			,LastUpdateFlag
+			,UpdateDateTime
+			,LoanGroup
+			,LoanGroupDesc
+	from DBScrub.TB_MBSProduct
+	where Product_key >= X_rowcount
+	and Product_key < (X_rowcount+10000)
+	order by Product_key;
+
+while (X_rowcount <= X_maxkey) LOOP
+begin
+
+	select ProductCode into X_NProductCode FROM TBMBSProd_csr_temp;
+	select  ProductType into  X_NProductType  FROM TBMBSProd_csr_temp;
+	select   ProductGroup into  X_NProductGroup FROM TBMBSProd_csr_temp;
+	select   ProductSuperGroup into   X_NProductSuperGroup FROM TBMBSProd_csr_temp; 
+	select   IslamProductIndicator  into  X_NIslamProductIndicator FROM TBMBSProd_csr_temp;
+	select   ProductClass  into 	X_NProductClass FROM TBMBSProd_csr_temp;
+	select    OldProductCode  into 	X_NOldProductCode FROM TBMBSProd_csr_temp;
+	select    LastUpdateFlag 	 into X_NLastUpdateFlag FROM TBMBSProd_csr_temp;
+	select    UpdateDateTime 	 into X_NUpdateDateTime FROM TBMBSProd_csr_temp;
+	select    LoanGroup 	 into X_NLoanGroup FROM TBMBSProd_csr_temp;
+	select    LoanGroupDesc	 into X_NLoangroupDesc  FROM TBMBSProd_csr_temp;
+
+--	while (X_X_fetch_status <> -1)
+	begin
+	 PERFORM MBS_LN_SP_Insert_TB_MBSProduct(X_NProductCode,X_NProductType,X_NProductGroup,X_NProductSuperGroup,X_NIslamProductIndicator,X_NProductClass  ,X_NOldProductCode ,X_NLastUpdateFlag,X_NUpdateDateTime,X_NLoanGroup,X_NLoanGroupDesc);
+end;
+		
+end;
+	end loop;
+
+X_rowcount = (X_rowcount+10000);
+
+end;
+$$
+LANGUAGE PLPGSQL;
+
+

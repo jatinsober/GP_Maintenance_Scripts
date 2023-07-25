@@ -1,0 +1,153 @@
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE FUNCTION MBS_LN_SP_INS_TB_MBSBranch() RETURNS VOID AS $procedure$
+
+Declare
+
+ v_BranchCd_key integer; 
+	v_BranchCd varchar (4); 
+	v_BrancdDescription varchar (25);
+	v_RegionCd varchar (4) ;
+	v_RegionDescription varchar (25);
+	v_BranchType varchar (1);
+	v_StreetLine1 varchar (30);
+	v_StreetLine2 varchar (30);
+	v_StreetLine3 varchar (30);
+	v_PostCode varchar (6) ;
+	v_Town varchar (3);
+	v_State varchar (2); 
+	v_Country varchar (2);
+	v_Telephone1 varchar (20);
+	v_Telephone2 varchar (20) ;
+	v_CashLimit numeric(13, 2) ;
+	v_FloorLimit numeric(13, 2) ;
+	v_OpenDt timestamp; 
+	v_NLastUpdateFlag integer; 
+	v_NUpdateDateTime timestamp;
+	v_start timestamp;
+	v_stop timestamp;
+	v_printline char (50);
+	v_maxkey integer;
+	v_rowcount integer;
+
+tbmbsbrch_csr_c1 cursor
+	for select BranchCd
+		,BrancdDescription
+		,RegionCd
+		,RegionDescription
+		,BranchType
+		,StreetLine1
+		,StreetLine2
+		,StreetLine3
+		,PostCode
+		,Town
+		,State
+		,Country
+		,Telephone1
+		,Telephone2
+		,CashLimit
+		,FloorLimit
+		,OpenDt
+		,LastUpdateFlag
+		,UpdateDateTime
+	from DBScrub.TB_MBSBranch
+	order by BranchCd_key;
+
+BEGIN
+
+v_maxkey := 0;
+	
+v_rowcount := 0;
+
+
+while (v_rowcount <= v_maxkey) 
+LOOP
+
+open tbmbsbrch_csr_c1;
+
+
+fetch tbmbsbrch_csr_c1 into v_BranchCd
+						,v_BrancdDescription
+						,v_RegionCd
+						,v_RegionDescription
+						,v_BranchType
+						,v_StreetLine1
+						,v_StreetLine2
+						,v_StreetLine3
+						,v_PostCode
+						,v_Town
+						,v_State
+						,v_Country
+						,v_Telephone1
+						,v_Telephone2
+						,v_CashLimit
+						,v_FloorLimit
+						,v_OpenDt
+						,v_NLastUpdateFlag
+						,v_NUpdateDateTime;
+
+
+						
+						
+while FOUND LOOP
+						
+						PERFORM MBS_LN_SP_Insert_TB_MBSBranch(v_BranchCd,
+						v_BrancdDescription
+						,v_RegionCd
+						,v_RegionDescription
+						,v_BranchType
+						,v_StreetLine1
+						,v_StreetLine2
+						,v_StreetLine3
+						,v_PostCode
+						,v_Town
+						,v_State
+						,v_Country
+						,v_Telephone1
+						,v_Telephone2
+						,v_CashLimit
+						,v_FloorLimit
+						,v_OpenDt
+						,v_NLastUpdateFlag
+						,v_NUpdateDateTime );
+						
+						
+						
+
+open tbmbsbrch_csr_c1;
+
+		fetch tbmbsbrch_csr_c1 into v_BranchCd
+						,v_BrancdDescription
+						,v_RegionCd
+						,v_RegionDescription
+						,v_BranchType
+						,v_StreetLine1
+						,v_StreetLine2
+						,v_StreetLine3
+						,v_PostCode
+						,v_Town
+						,v_State
+						,v_Country
+						,v_Telephone1
+						,v_Telephone2
+						,v_CashLimit
+						,v_FloorLimit
+						,v_OpenDt
+						,v_NLastUpdateFlag
+						,v_NUpdateDateTime;
+
+
+
+end loop;
+
+--select v_rowcount = (v_rowcount+10000);
+ end loop;
+
+CLOSE tbmbsbrch_csr_c1;
+   RETURN;
+
+END; 
+$procedure$
+
+LANGUAGE plpgsql;
+

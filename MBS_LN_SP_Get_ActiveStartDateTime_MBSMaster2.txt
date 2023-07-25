@@ -1,0 +1,90 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 30-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO DBSCRUB;
+
+CREATE  or replace FUNCTION MBS_LN_SP_Get_ActiveStartDateTime_MBSMaster2(INOUT v_activ INTEGER 
+,INOUT v_activ2 INTEGER)		--YYYYMMDD 
+			--HHMMSS
+   AS $procedure$
+   DECLARE
+   v_activ3  INTEGER;
+   v_activ4  INTEGER;
+   v_activ5  INTEGER;
+   v_activ6  VARCHAR(4);
+   v_activ7  VARCHAR(2);
+   v_activ8  VARCHAR(2);
+   v_activ9  INTEGER;
+   v_activ10  INTEGER;
+   v_activ11  INTEGER;
+   v_activ12  VARCHAR(2);
+   v_activ13  VARCHAR(2);
+   v_activ14  VARCHAR(2);
+   v_activ15  INTEGER;
+   v_activ16  INTEGER;
+   v_add_g  TIMESTAMP;
+   v_locma  TIMESTAMP;
+BEGIN
+   select   JobLastEndDate INTO v_locma from  TB_MBSJobStatus where(JobId = 49);
+
+   v_add_g := v_locma+'360 minute';
+--print @locmaster_enddt
+--print @add_getdate
+
+
+   v_activ3 := EXTRACT(YEAR FROM v_add_g); 
+   v_activ4 := EXTRACT(MONTH FROM v_add_g); 
+   v_activ5 := EXTRACT(DAY FROM v_add_g); 
+
+   v_activ9 := EXTRACT(HOUR FROM v_add_g); 
+   v_activ10 := EXTRACT(MINUTE FROM v_add_g); 
+   v_activ11 := EXTRACT(SECOND FROM v_add_g); 
+
+   v_activ6 := cast(EXTRACT(YEAR FROM v_add_g) as VARCHAR(30)); 
+   v_activ12 := cast(EXTRACT(HOUR FROM v_add_g) as VARCHAR(30));
+
+   If v_activ4  < 10 then
+      v_activ7 := '0' || SUBSTR(cast(v_activ4 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ7 := SUBSTR(cast(v_activ4 as VARCHAR(30)),1,30);
+   END IF;
+
+
+   If v_activ5  < 10 then
+      v_activ8 := '0' || SUBSTR(cast(v_activ5 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ8 := SUBSTR(cast(v_activ5 as VARCHAR(30)),1,30);
+   END IF;
+
+   If v_activ10  < 10 then
+      v_activ13 := '0' || SUBSTR(cast(v_activ10 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ13 := SUBSTR(cast(v_activ10 as VARCHAR(30)),1,30);
+   END IF;
+
+
+   If v_activ11  < 10 then
+      v_activ14 := '0' || SUBSTR(cast(v_activ11 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ14 := SUBSTR(cast(v_activ11 as VARCHAR(30)),1,30);
+   END IF;
+
+   v_activ15 := cast(v_activ6 || v_activ7 || v_activ8 as INTEGER);
+   v_activ16 := cast(v_activ12 || v_activ13 || v_activ14 as INTEGER);
+
+--print @active_start_date
+--print @active_start_time
+
+   v_activ := v_activ15; 
+   v_activ2 := v_activ16;
+   RETURN;
+END; $procedure$
+LANGUAGE plpgsql;
+
+
+
+
+

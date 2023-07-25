@@ -1,0 +1,212 @@
+--
+-- Dev: Jitendra Lodwal
+-- Date: 02/JAN/2012
+-- Desc: Intial Conversion
+
+
+SET SEARCH_PATH TO MBS_LOANS;
+
+CREATE OR REPLACE  FUNCTION MBS_LN_SP_Insert_TB_MBSBranch(  v_NBranchCd varchar (4) 
+	,v_NBranchDescription 		varchar (25)
+	,v_NRegionCd 			varchar (4) 
+	,v_NRegionDescription 		varchar (25)
+	,v_NBranchType 		varchar (1)
+	,v_NStreetLine1 			varchar (30)
+	,v_NStreetLine2 			varchar (30)
+	,v_NStreetLine3 			varchar (30)
+	,v_NPostCode 			varchar (6) 
+	,v_NTown 			varchar (3)
+	,v_NState 			varchar (2) 
+	,v_NCountry 			varchar (2)
+	,v_NTelephone1 		varchar (20)
+	,v_NTelephone2 		varchar (20) 
+	,v_NCashLimit 			numeric(13, 2) 
+	,v_NFloorLimit 			numeric(13, 2) 
+	,v_NOpenDt 			timestamp 
+	,v_nLastUpdateFlag		int
+	,v_nUpdateDateTime		timestamp ) RETURNS VOID AS $$
+
+
+declare	
+
+	v_oldBranchDescription 	varchar (25);
+	v_oldRegionCd 			varchar (4) ;
+	v_oldRegionDescription 		varchar (25);
+	v_oldBranchType 		varchar (1);
+	v_oldStreetLine1 		varchar (30);
+	v_oldStreetLine2 		varchar (30);
+	v_oldStreetLine3 		varchar (30);
+	v_oldPostCode 			varchar (6); 
+	v_oldTown 			varchar (3);
+	v_oldState 			varchar (2) ;
+	v_oldCountry 			varchar (2);
+	v_oldTelephone1 		varchar (20);
+	v_oldTelephone2 		varchar (20) ;
+	v_oldCashLimit 			numeric(13, 2); 
+	v_oldFloorLimit 			numeric(13, 2) ;
+	v_oldOpenDt 			timestamp ;
+	v_oldLastUpdateFlag		int;
+	v_oldUpdateDateTime		timestamp;
+	v_varcount 			int;
+
+
+BEGIN
+	v_varcount :=  count(*) from MBS_Loans.TB_MBSBranch
+			where BranchCd = v_nBranchCd And LastUpdateFlag = 1;
+
+		if v_varcount > 0 then
+		
+		/* 		  v_oldBranchDescription 		:=  BrancdDescription from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldRegionCd 		:=  RegionCd from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldRegionDescription 		:=  RegionDescription from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldBranchType 		:=  BranchType from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldStreetLine1 		:=  StreetLine1  from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldStreetLine2 		:=  StreetLine2 from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldStreetLine3 		:=  StreetLine3  from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldPostCode 			:=  PostCode from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldTown 			:=  Town from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldState 			:=  State from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldCountry 			:=  Country from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldTelephone1 		:=  Telephone1 from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldTelephone2 		:=  Telephone2  from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldCashLimit 			:=  CashLimit from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldFloorLimit 			:=  FloorLimit from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+				v_oldOpenDt 			:=  OpenDt from MBS_Loans.TB_MBSBranch where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+			*/
+			
+			select   v_oldBranchDescription 		= BrancdDescription
+				,v_oldRegionCd 			= RegionCd 
+				,v_oldRegionDescription 		= RegionDescription
+				,v_oldBranchType 		= BranchType
+				,v_oldStreetLine1 		= StreetLine1 
+				,v_oldStreetLine2 		= StreetLine2
+				,v_oldStreetLine3 		= StreetLine3 
+				,v_oldPostCode 			= PostCode 
+				,v_oldTown 			= Town
+				,v_oldState 			= State
+				,v_oldCountry 			= Country
+				,v_oldTelephone1 		= Telephone1
+				,v_oldTelephone2 		= Telephone2 
+				,v_oldCashLimit 			= CashLimit
+				,v_oldFloorLimit 			= FloorLimit
+				,v_oldOpenDt 			= OpenDt
+			from MBS_Loans.TB_MBSBranch
+			where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+			
+			if	(v_oldBranchDescription 		<> v_NBranchDescription) OR
+				(v_oldRegionCd 			<> v_NRegionCd ) OR
+				(v_oldRegionDescription 		<> v_NRegionDescription) OR
+				(v_oldBranchType 		<> v_NBranchType) OR
+				(v_oldStreetLine1 		<> v_NStreetLine1 ) OR
+				(v_oldStreetLine2 		<> v_NStreetLine2) OR
+				(v_oldStreetLine3 		<> v_NStreetLine3 ) OR
+				(v_oldPostCode 			<> v_NPostCode ) OR
+				(v_oldTown 			<> v_NTown) OR
+				(v_oldState 			<> v_NState) OR
+				(v_oldCountry 			<> v_NCountry) OR
+				(v_oldTelephone1 		<> v_NTelephone1) OR
+				(v_oldTelephone2 		<> v_NTelephone2 ) OR
+				(v_oldCashLimit 			<> v_NCashLimit) OR
+				(v_oldFloorLimit 			<> v_NFloorLimit) OR
+				(v_oldOpenDt 			<> v_NOpenDt) Then
+			
+				
+		
+				update MBS_Loans.TB_MBSBranch
+				set LastUpdateFlag = 0
+				where BranchCd = v_nBranchCd and LastUpdateFlag = 1;
+
+				insert into MBS_Loans.TB_MBSBranch
+					(branchcd_key,BranchCd
+					,BrancdDescription
+					,RegionCd
+					,RegionDescription
+					,BranchType
+					,StreetLine1
+					,StreetLine2
+					,StreetLine3
+					,PostCode
+					,Town
+					,State
+					,Country
+					,Telephone1
+					,Telephone2
+					,CashLimit
+					,FloorLimit
+					,OpenDt
+					,LastUpdateFlag
+					,UpdateDateTime)
+				values
+					(nextval('seq_tb_mbsbranch')
+					,v_NBranchCd
+					,v_NBranchDescription
+					,v_NRegionCd
+					,v_NRegionDescription
+					,v_NBranchType
+					,v_NStreetLine1
+					,v_NStreetLine2
+					,v_NStreetLine3
+					,v_NPostCode
+					,v_NTown
+					,v_NState
+					,v_NCountry
+					,v_NTelephone1
+					,v_NTelephone2
+					,v_NCashLimit
+					,v_NFloorLimit
+					,v_NOpenDt
+					,v_nLastUpdateFlag
+					,v_nUpdateDateTime);
+			end if;	
+			
+end if;
+		
+
+		if v_varcount = 0 Then
+		
+			
+				insert into MBS_Loans.TB_MBSBranch
+					(branchcd_key,BranchCd
+					,BrancdDescription
+					,RegionCd
+					,RegionDescription
+					,BranchType
+					,StreetLine1
+					,StreetLine2
+					,StreetLine3
+					,PostCode
+					,Town
+					,State
+					,Country
+					,Telephone1
+					,Telephone2
+					,CashLimit
+					,FloorLimit
+					,OpenDt
+					,LastUpdateFlag
+					,UpdateDateTime)
+				values
+					(nextval('seq_tb_mbsbranch'),v_NBranchCd
+					,v_NBranchDescription
+					,v_NRegionCd
+					,v_NRegionDescription
+					,v_NBranchType
+					,v_NStreetLine1
+					,v_NStreetLine2
+					,v_NStreetLine3
+					,v_NPostCode
+					,v_NTown
+					,v_NState
+					,v_NCountry
+					,v_NTelephone1
+					,v_NTelephone2
+					,v_NCashLimit
+					,v_NFloorLimit
+					,v_NOpenDt
+					,v_nLastUpdateFlag
+					,v_nUpdateDateTime);
+
+end if;
+END;
+$$
+LANGUAGE PLPGSQL;

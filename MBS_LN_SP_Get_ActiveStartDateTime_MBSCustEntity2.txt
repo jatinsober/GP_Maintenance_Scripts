@@ -1,0 +1,138 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 30-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO DBSCRUB;
+
+Create   or replace FUNCTION MBS_LN_SP_Get_ActiveStartDateTime_MBSCustEntity2(INOUT v_activ INTEGER 
+,INOUT v_activ2 INTEGER 
+,INOUT v_activ3 INTEGER 
+,INOUT v_activ4 INTEGER)		--YYYYMMDD 
+			--YYYYMMDD 
+			--HHMMSS
+			--HHMMSS
+   AS $procedure$
+   DECLARE
+   v_activ5  INTEGER;
+   v_activ6  INTEGER;
+   v_activ7  INTEGER;
+   v_activ8  INTEGER;
+   v_activ9  INTEGER;
+   v_activ10  INTEGER;
+   v_activ11  VARCHAR(4);
+   v_activ12  VARCHAR(4);
+   v_activ13  VARCHAR(2);
+   v_activ14  VARCHAR(2);
+   v_activ15  VARCHAR(2);
+   v_activ16  VARCHAR(2);
+   v_activ17  INTEGER;
+   v_activ18  INTEGER;
+   v_activ19  INTEGER;
+   v_activ20  INTEGER;
+   v_activ21  INTEGER;
+   v_activ22  INTEGER;
+   v_activ23  VARCHAR(2);
+   v_activ24  VARCHAR(2);
+   v_activ25  VARCHAR(2);
+   v_activ26  VARCHAR(2);
+   v_activ27  VARCHAR(2);
+   v_activ28  VARCHAR(2);
+   v_activ29  INTEGER;
+   v_activ30  INTEGER;
+   v_activ31  INTEGER;
+   v_activ32  INTEGER;
+   v_add_g  TIMESTAMP;
+   v_add_g2  TIMESTAMP;
+   v_locma  TIMESTAMP;
+BEGIN
+   select   JobLastEndDate INTO v_locma from  TB_MBSJobStatus where(JobId = 49);
+
+   v_add_g := v_locma+'720 minute';
+   v_add_g2 := v_locma+'780 minute';
+
+   v_activ5 := EXTRACT(YEAR FROM v_add_g); 
+   v_activ7 := EXTRACT(MONTH FROM v_add_g); 
+   v_activ9 := EXTRACT(DAY FROM v_add_g); 
+   v_activ6 := EXTRACT(YEAR FROM v_add_g2); 
+   v_activ8 := EXTRACT(MONTH FROM v_add_g2); 
+   v_activ10 := EXTRACT(DAY FROM v_add_g2); 
+
+   v_activ17 := EXTRACT(HOUR FROM v_add_g); 
+   v_activ19 := EXTRACT(MINUTE FROM v_add_g); 
+   v_activ21 := EXTRACT(SECOND FROM v_add_g); 
+   v_activ18 := EXTRACT(HOUR FROM v_add_g2); 
+   v_activ20 := EXTRACT(MINUTE FROM v_add_g2); 
+   v_activ22 := EXTRACT(SECOND FROM v_add_g2); 
+
+   v_activ11 := cast(EXTRACT(YEAR FROM v_add_g) as VARCHAR(30)); 
+   v_activ23 := cast(EXTRACT(HOUR FROM v_add_g) as VARCHAR(30));
+   v_activ12 := cast(EXTRACT(YEAR FROM v_add_g2) as VARCHAR(30)); 
+   v_activ24 := cast(EXTRACT(HOUR FROM v_add_g2) as VARCHAR(30));
+
+--for custentity1
+   If v_activ7  < 10 then
+      v_activ13 := '0' || SUBSTR(cast(v_activ7 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ13 := SUBSTR(cast(v_activ7 as VARCHAR(30)),1,30);
+   END IF;
+
+   If v_activ9  < 10 then
+      v_activ15 := '0' || SUBSTR(cast(v_activ9 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ15 := SUBSTR(cast(v_activ9 as VARCHAR(30)),1,30);
+   END IF;
+
+   If v_activ19  < 10 then
+      v_activ25 := '0' || SUBSTR(cast(v_activ19 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ25 := SUBSTR(cast(v_activ19 as VARCHAR(30)),1,30);
+   END IF;
+
+   If v_activ21  < 10 then
+      v_activ27 := '0' || SUBSTR(cast(v_activ21 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ27 := SUBSTR(cast(v_activ21 as VARCHAR(30)),1,30);
+   END IF;
+
+--for custentity2
+   If v_activ8  < 10 then
+      v_activ14 := '0' || SUBSTR(cast(v_activ8 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ14 := SUBSTR(cast(v_activ8 as VARCHAR(30)),1,30);
+   END IF;
+
+   If v_activ10  < 10 then
+      v_activ16 := '0' || SUBSTR(cast(v_activ10 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ16 := SUBSTR(cast(v_activ10 as VARCHAR(30)),1,30);
+   END IF;
+
+   If v_activ20  < 10 then
+      v_activ26 := '0' || SUBSTR(cast(v_activ20 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ26 := SUBSTR(cast(v_activ20 as VARCHAR(30)),1,30);
+   END IF;
+
+   If v_activ22  < 10 then
+      v_activ28 := '0' || SUBSTR(cast(v_activ22 as VARCHAR(30)),1,30);
+   ELSE
+      v_activ28 := SUBSTR(cast(v_activ22 as VARCHAR(30)),1,30);
+   END IF;
+
+
+   v_activ29 := cast(v_activ11 || v_activ13 || v_activ15 as INTEGER);
+   v_activ31 := cast(v_activ23 || v_activ25 || v_activ27 as INTEGER);
+   v_activ30 := cast(v_activ12 || v_activ14 || v_activ16 as INTEGER);
+   v_activ32 := cast(v_activ24 || v_activ26 || v_activ28 as INTEGER);
+
+   v_activ := v_activ29; 
+   v_activ2 := v_activ31;
+   v_activ3 := v_activ30; 
+   v_activ4 := v_activ32;
+   RETURN;
+END; $procedure$
+LANGUAGE plpgsql;
+
+
