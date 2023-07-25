@@ -1,0 +1,218 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 25-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO RISK;
+
+CREATE OR REPLACE FUNCTION Rmd_Load_Globus_Amm () RETURNS VOID AS $$
+
+DECLARE
+
+/*********************************************************************************************************************/
+-- AUTHOR     -------- DATE        ------------- REMARKS ---------------------
+/*********************************************************************************************************************/
+-- AMYLIA            03-DEC-2008         TO RENAME ALL THE NEW TABLES FOR GLOBUS
+
+
+
+/*********************************************************************************************************************/
+	   PRO_NAME        ADM_EXT_TO_STG_LOG.ETS_NAME%TYPE;
+	   PRO_BUS_DATE    ADM_EXT_TO_STG_LOG.ETS_BUS_DATE%TYPE;
+	   PRO_STATUS      ADM_EXT_TO_STG_LOG.ETS_STATUS%TYPE;
+	   PRO_LOAD_STATUS ADM_EXT_TO_STG_LOG.ETS_LOAD_STATUS%TYPE;
+	   SYS_DATE DATE;
+BEGIN
+
+	 /*GET SYSTEM DATE*/
+	 SELECT CURRENT_DATE INTO SYS_DATE;
+
+
+	/*LOAD DATA FROM EXTERNAL TABLE TO STAGING*/
+
+/********************************************************************************************************************/
+			/*(2).GLOBUS_AMM*/
+/********************************************************************************************************************/
+						/* GLOBUS_AMM */
+
+						/*LOAD START STATUS*/
+
+		 				 PRO_NAME := 'GLOBUS (AMM) LOADING';
+		 				 PRO_STATUS := 'START';
+		 				 PRO_BUS_DATE := SYS_DATE;
+		 				 PRO_LOAD_STATUS := 'TRUE';
+
+						 INSERT INTO ADM_EXT_TO_STG_LOG
+						 (ETS_NAME, ETS_STATUS, ETS_BUS_DATE, ETS_LOAD_STATUS)
+						 VALUES
+						 (PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS);
+
+
+						/*TRUNCATE STG TABLE*/
+
+
+						 TRUNCATE TABLE GLO_CUST_NEW_STG;
+						 TRUNCATE TABLE GLO_MM_NEW_STG;
+						 TRUNCATE TABLE GLO_SC_TRD_POST_NEW_STG;
+						 TRUNCATE TABLE GLO_LIMIT_NEW_STG;
+						 TRUNCATE TABLE GLO_FOREX_NEW_STG;
+						 TRUNCATE TABLE GLO_CURRENCY_NEW_STG;
+
+						
+		                 /*INSERT STATUS*/
+		 				 --PRO_NAME := 'LOAD FROM GLO_CUST_EXT INTO GLO_CUST_STG';
+						 PRO_NAME := 'LOAD FROM GLO_CUST_NEW_EXT INTO GLO_CUST_NEW_STG';
+		 				 PRO_STATUS := 'COMPLETE';
+		 				 PRO_BUS_DATE := Get_Current_Date(SYS_DATE);
+		 				 PRO_LOAD_STATUS := 'TRUE';
+
+						/*
+						 1.LOAD DATA INTO CUSTOMER STAGING TABLE
+						*/
+						
+
+						INSERT INTO GLO_CUST_NEW_STG
+					    (SELECT * FROM GLO_CUST_NEW_EXT);
+
+						 INSERT INTO ADM_EXT_TO_STG_LOG
+						 (ETS_NAME, ETS_STATUS, ETS_BUS_DATE, ETS_LOAD_STATUS)
+						 VALUES
+						 (PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS);
+
+
+
+		                 /*INSERT STATUS*/
+		 				 --PRO_NAME := 'LOAD FROM GLO_MM_EXT INTO GLO_MM_STG';
+						 PRO_NAME := 'LOAD FROM GLO_MM_NEW_EXT INTO GLO_MM_NEW_STG';
+		 				 PRO_STATUS := 'COMPLETE';
+		 				 PRO_BUS_DATE := Get_Current_Date(SYS_DATE);
+		 				 PRO_LOAD_STATUS := 'TRUE';
+
+						/*
+						2.LOAD DATA INTO MONEY MARKET STAGING TABLE
+						*/
+						INSERT INTO GLO_MM_NEW_STG
+					    (SELECT * FROM GLO_MM_NEW_EXT);
+
+						 INSERT INTO ADM_EXT_TO_STG_LOG
+						 (ETS_NAME, ETS_STATUS, ETS_BUS_DATE, ETS_LOAD_STATUS)
+						 VALUES
+						 (PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS);
+
+
+
+		                 /*INSERT STATUS*/
+		 				 --PRO_NAME := 'LOAD FROM GLO_SC_TRD_POST_EXT INTO GLO_SC_TRD_POST_STG';
+						 PRO_NAME := 'LOAD FROM GLO_SC_TRD_POST_NEW_EXT INTO GLO_SC_TRD_POST_NEW_STG';
+		 				 PRO_STATUS := 'COMPLETE';
+		 				 PRO_BUS_DATE := Get_Current_Date(SYS_DATE);
+		 				 PRO_LOAD_STATUS := 'TRUE';
+
+						/*
+						3.LOAD DATA INTO SECURITIES TRADING TABLE
+						*/
+						
+						INSERT INTO GLO_SC_TRD_POST_NEW_STG
+					    (SELECT * FROM GLO_SC_TRD_POST_NEW_EXT);
+
+						 INSERT INTO ADM_EXT_TO_STG_LOG
+						 (ETS_NAME, ETS_STATUS, ETS_BUS_DATE, ETS_LOAD_STATUS)
+						 VALUES
+						 (PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS);
+
+
+
+		                 /*INSERT STATUS*/
+		 				
+						 PRO_NAME := 'LOAD FROM GLO_LIMIT_NEW_EXT INTO GLO_LIMIT_NEW_STG';
+		 				 PRO_STATUS := 'COMPLETE';
+		 				 PRO_BUS_DATE := Get_Current_Date(SYS_DATE);
+		 				 PRO_LOAD_STATUS := 'TRUE';
+
+						/*
+						4.LOAD DATA INTO LIMIT TABLE
+						*/
+						INSERT INTO GLO_LIMIT_NEW_STG
+					   (SELECT * FROM GLO_LIMIT_NEW_EXT);
+
+						 INSERT INTO ADM_EXT_TO_STG_LOG
+						 (ETS_NAME, ETS_STATUS, ETS_BUS_DATE, ETS_LOAD_STATUS)
+						 VALUES
+						 (PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS);
+
+
+
+		                 /*INSERT STATUS*/
+		 				 --PRO_NAME := 'LOAD FROM GLO_FOREX_EXT INTO GLO_FOREX_STG';
+						 PRO_NAME := 'LOAD FROM GLO_FOREX_NEW_EXT INTO GLO_FOREX_NEW_STG';
+		 				 PRO_STATUS := 'COMPLETE';
+		 				 PRO_BUS_DATE := Get_Current_Date(SYS_DATE);
+		 				 PRO_LOAD_STATUS := 'TRUE';
+
+						/*
+						5.LOAD DATA INTO FOREX TABLE
+						*/
+						
+						INSERT INTO GLO_FOREX_NEW_STG
+					    (SELECT * FROM GLO_FOREX_NEW_EXT);
+
+						 INSERT INTO ADM_EXT_TO_STG_LOG
+						 (ETS_NAME, ETS_STATUS, ETS_BUS_DATE, ETS_LOAD_STATUS)
+						 VALUES
+						 (PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS);
+
+
+
+		                 /*INSERT STATUS*/
+		 				 --PRO_NAME := 'LOAD FROM GLO_CURRENCY_EXT INTO GLO_CURRENCY_STG';
+						 PRO_NAME := 'LOAD FROM GLO_CURRENCY_NEW_EXT INTO GLO_CURRENCY_NEW_STG';
+		 				 PRO_STATUS := 'COMPLETE';
+		 				 PRO_BUS_DATE := Get_Current_Date(SYS_DATE);
+		 				 PRO_LOAD_STATUS := 'TRUE';
+
+						 /*
+						 6.LOAD DATA INTO FOREX TABLE
+						 */
+
+						 INSERT INTO GLO_CURRENCY_NEW_STG
+						SELECT * FROM GLO_CURRENCY_NEW_EXT;
+
+						 INSERT INTO ADM_EXT_TO_STG_LOG
+						 (ETS_NAME, ETS_STATUS, ETS_BUS_DATE, ETS_LOAD_STATUS)
+						 VALUES
+						 (PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS);
+
+
+						/*LOAD END STATUS*/
+		 				 PRO_NAME := 'GLOBUS (AMM) LOADING';
+		 				 PRO_STATUS := 'END';
+		 				 PRO_BUS_DATE := Get_Current_Date(SYS_DATE);
+		 				 PRO_LOAD_STATUS := 'TRUE';
+
+						 INSERT INTO ADM_EXT_TO_STG_LOG
+						 (ETS_NAME, ETS_STATUS, ETS_BUS_DATE, ETS_LOAD_STATUS)
+						 VALUES
+						 (PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS);
+
+--/********************************************************************************************************************/
+			--/*(1).END GLOBUS_AMM*/
+--/********************************************************************************************************************/
+
+
+EXCEPTION
+     WHEN OTHERS THEN
+		-- /*INSERT INTO ADM_EXT_TO_STG_LOG*/
+
+		 PRO_STATUS := '-1,error';
+		 PRO_BUS_DATE := Get_Current_Date(SYS_DATE);
+		 PRO_LOAD_STATUS := 'FALSE';
+
+		INSERT INTO ADM_EXT_TO_STG_LOG
+		(ETS_NAME, ETS_STATUS, ETS_BUS_DATE, ETS_LOAD_STATUS)
+		VALUES
+		(PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS);
+
+END ;
+$$
+LANGUAGE PLPGSQL;

@@ -1,0 +1,11 @@
+create or replace function last_day(date) returns date as 'select                             cast(date_trunc(''month'', $1) + ''1 month''::interval as date) - 1'                                language sql;
+
+create or replace function last_day1(timestamp) returns date as 'select                             cast(date_trunc(''month'', $1) + ''1 month''::interval as date) - 1'                                language sql;
+
+Implementing Oracle Addmonth function.
+
+ambank_dwh=# SELECT last_day1('2012-02-29'::date + cast('1 months' as interval));
+ last_day1  
+------------
+ 2012-03-31
+(1 row)

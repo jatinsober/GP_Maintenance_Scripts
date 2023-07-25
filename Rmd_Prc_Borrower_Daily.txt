@@ -1,0 +1,190 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 25-09-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO RISK;
+
+CREATE OR REPLACE FUNCTION Rmd_Prc_Borrower_Daily(RERUN_DATE IN DATE) RETURNS VOID AS $$
+DECLARE
+
+/*********************************************************************************************************************/
+-- AUTHOR     -------- DATE        ------------- REMARKS ---------------------
+/*********************************************************************************************************************/
+-- AMYLIA            03-DEC-2008         TO RENAME ALL THE NEW TABLES FOR GLOBUS
+
+
+
+/*********************************************************************************************************************/
+
+	   PRO_NAME        ADM_PROCESS_LOG.APL_PRO_NAME%TYPE;
+	   PRO_STATUS      ADM_PROCESS_LOG.APL_PRO_STATUS%TYPE;
+	   PRO_BUS_DATE    ADM_PROCESS_LOG.APL_PRO_BUS_DATE%TYPE;
+	   PRO_LOAD_STATUS ADM_PROCESS_LOG.APL_LOAD_STATUS%TYPE;
+	   PRO_SYSTEM_DATE ADM_PROCESS_LOG.APL_SYSTEM_DATE%TYPE;
+	   SYS_DATE DATE;
+	   DAILY_MONTH VARCHAR(10);
+	   STG_MONTH VARCHAR(10);
+	   NUM_RECORD INT;
+BEGIN
+
+	 /*GET SYSTEM DATE*/
+	 SELECT SYSDATE FROM DUAL INTO SYS_DATE;
+
+	/*LOAD DATA INTO BORROWER TABLE*/
+
+/********************************************************************************************************************/
+-- (1). LOAD BORROWER FROM GLOBUS
+/********************************************************************************************************************/
+
+						/*LOAD START STATUS*/
+						 PRO_NAME := 'LOAD GLOBUS BORROWER';
+						 PRO_STATUS := 'START';
+						 PRO_BUS_DATE := RERUN_DATE;
+						 PRO_LOAD_STATUS := 'TRUE';
+						 PRO_SYSTEM_DATE := SYS_DATE;
+
+						INSERT INTO ADM_PROCESS_LOG
+						(APL_PRO_NAME, APL_PRO_STATUS, APL_PRO_BUS_DATE, APL_LOAD_STATUS, APL_SYSTEM_DATE)
+						VALUES	(PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS, PRO_SYSTEM_DATE);
+
+						 /*GET NUM OF RECORD IN BORROWER_DAILY_STG*/
+						 SELECT COUNT(*) INTO NUM_RECORD FROM BORROWER_DAILY_STG ;
+
+						 IF(NUM_RECORD != 0) THEN
+						 	  /*BORROWER_DAILY_STG IS NOT EMPTY*/
+
+							  /*GET MONTH OF STG BUSINESS DATE*/
+							  --SELECT DISTINCT  SUBSTR(TO_DATE(BUS_DT,'YYYY/MM/DD'),4,3) INTO STG_MONTH FROM GLO_CUST_STG;
+							  SELECT DISTINCT  SUBSTR(TO_DATE(BUS_DT,'YYYY/MM/DD'),4,3) INTO STG_MONTH FROM GLO_CUST_NEW_STG;
+
+							  /*GET MONTH OF DAILY BUSINESS DATE*/
+							  SELECT DISTINCT SUBSTR(DATE_EXTRACT,4,3) INTO DAILY_MONTH FROM BORROWER_DAILY_STG ;
+
+							  /*COMPARE MONTH*/
+
+							  IF(TRIM(DAILY_MONTH) != TRIM(STG_MONTH)) THEN
+
+            						/*LOAD STATUS*/
+            					    PRO_NAME := 'INSERT ROC, BUS DATE, BOR_NAME, BOR_TYPE, SOURCE_ID INTO BORROWER_MONTHLY_STG';
+
+
+									/*1. LOAD DATA INTO BORROWER_MONTHLY_STG*/
+            						INSERT INTO BORROWER_MONTHLY_STG
+            						SELECT * FROM BORROWER_DAILY_STG;
+
+									/*2.TRUNCATE TABLE BORROWER_STG*/
+									TRUNCATE TABLE BORROWER_DAILY_STG;
+
+							  END IF; /*END COMPARE*/
+
+						 END IF; /*END CHECK RECORD*/
+
+					    /*
+						 TRUNCATE TABLE BORROWER_CLS_TEMP 
+						*/
+
+
+						TRUNCATE TABLE BORROWER_GLO_STG;
+
+						/*DON'T TRUNCATE BORROWER_STG*/
+						--EXECUTE IMMEDIATE 'TRUNCATE TABLE BORROWER_STG';
+
+						/*LOAD STATUS*/
+						  --PRO_NAME := 'LOAD DATE EXTRACT, ROC, BOR_NAME, BOR_TYPE, SOURCE_ID FROM GLO_CUST_STG INTO BORROWER_GLO_STG';
+						  PRO_NAME := 'LOAD DATE EXTRACT, ROC, BOR_NAME, BOR_TYPE, SOURCE_ID FROM GLO_CUST_NEW_STG INTO BORROWER_GLO_STG';
+				 		/*
+				 		LOAD ROC, BOR_NAME, BOR_TYPE, DATE EXTRACT, SOURCE_ID
+				 		INTO BORROWER_GLO_STG
+				 		*/
+				 		INSERT INTO BORROWER_GLO_STG
+                         (DATE_EXTRACT,
+                         ROC,
+                         BOR_NAME,
+                         BOR_TYPE,
+                         SOURCE_ID)
+						SELECT  DISTINCT TO_DATE(BUS_DT, 'YYYY/MM/DD'),
+                        		 		  TRIM(LTRIM(CO_REIGN_NO,'0')),
+                       				  SUBSTR(SHORT_NM,1, 40),
+                       				  SUBSTR(SEC_SH_NM,1,30),
+                       				  SOURCE_ID
+						FROM GLO_CUST_NEW_STG;
+                        --FROM GLO_CUST_STG;
+
+
+						/*LOAD STATUS*/
+						  --PRO_NAME := 'LOAD ROC, CUST_ID FROM GLO_CUST_STG INTO BORROWER_GLO_STG';
+						  PRO_NAME := 'LOAD ROC, CUST_ID FROM GLO_CUST_NEW_STG INTO BORROWER_GLO_STG';
+
+						/* TO REPLACE ROC = '*', '0' WITH CUST_ID */
+						DECLARE
+								CUST_ROC 	  GLO_CUST_NEW_STG.CO_REIGN_NO%TYPE;
+								CUST_ID 	  GLO_CUST_NEW_STG.CUST_CD%TYPE;
+								X RECORD;
+						BEGIN
+							 	 FOR X IN
+							 	 	 (SELECT DISTINCT CO_REIGN_NO, CUST_CD
+							 	  	  FROM   GLO_CUST_NEW_STG
+							 	  	  WHERE  TRIM(CO_REIGN_NO) IN ('*', '0'))
+							 	 LOOP
+							 		  CUST_ROC 	 :=    X.CO_REIGN_NO;
+							 		  CUST_ID 	 :=    X.CUST_CD;
+							 		  UPDATE BORROWER_GLO_STG
+							 		  SET	 ROC  =  CUST_ID
+							 		  WHERE  TRIM(ROC) IN ('*', '0');
+							   	 END LOOP;
+						END;
+
+
+						/****************************************************************************
+						                       INSERT DATA INTO BORROWER_DAILY_STG
+						*****************************************************************************/
+
+					  /*LOAD STATUS*/
+					    PRO_NAME := 'INSERT ROC, BUS DATE, BOR_NAME, BOR_TYPE, SOURCE_ID FROM BORROWER_GLO_STG INTO BORROWER_DAILY_STG';
+
+						/* INSERT GLO ROC INTO BORROWER_STG TABLE */
+						INSERT INTO BORROWER_DAILY_STG
+                         (DATE_EXTRACT,ROC,BOR_NAME,BOR_TYPE,SOURCE_ID)
+						SELECT DATE_EXTRACT,ROC,BOR_NAME,BOR_TYPE,SOURCE_ID
+						FROM BORROWER_GLO_STG;
+
+
+						/*LOAD START STATUS*/
+						 PRO_NAME := 'LOAD GLOBUS BORROWER';
+						 PRO_STATUS := 'END';
+						 PRO_BUS_DATE := RERUN_DATE;
+						 PRO_LOAD_STATUS := 'TRUE';
+ 						 PRO_SYSTEM_DATE := Get_Current_Date(SYS_DATE);
+
+						 INSERT INTO ADM_PROCESS_LOG
+						 (APL_PRO_NAME, APL_PRO_STATUS, APL_PRO_BUS_DATE, APL_LOAD_STATUS, APL_SYSTEM_DATE)
+						 VALUES	(PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS, PRO_SYSTEM_DATE);
+
+/********************************************************************************************************************/
+-- (1). LOAD BORROWER FROM GLOBUS
+/********************************************************************************************************************/
+
+
+EXCEPTION
+     WHEN OTHERS THEN
+		 /*INSERT INTO ADM_EXT_TO_STG_LOG*/
+		 --PRO_NAME := 'LOAD EXTERNAL TABLE INTO STAGING TABLE';
+		 PRO_STATUS := '-1 , error';
+		 PRO_BUS_DATE := RERUN_DATE;
+		 PRO_SYSTEM_DATE := Get_Current_Date(SYS_DATE);
+		 PRO_LOAD_STATUS := 'FALSE';
+
+		 INSERT INTO ADM_PROCESS_LOG
+		 (APL_PRO_NAME, APL_PRO_STATUS, APL_PRO_BUS_DATE, APL_LOAD_STATUS, APL_SYSTEM_DATE)
+		 VALUES	(PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS, PRO_SYSTEM_DATE);
+
+		 /*INSERT INTO ADM_ERROR_LOG*/
+		 INSERT INTO ADM_ERROR_LOG
+		 (AEL_PRO_NAME, AEL_PRO_STATUS, AEL_PRO_BUS_DATE, AEL_LOAD_STATUS, AEL_SYSTEM_DATE)
+		 VALUES	(PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS, PRO_SYSTEM_DATE);
+
+END;
+$$
+LANGUAGE PLPGSQL;

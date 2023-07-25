@@ -1,0 +1,145 @@
+------
+--Dev: Jitendra Lodwal
+--Date: 26/09/2011
+--Desc: Function
+------
+
+SET SEARCH_PATH TO RISK;
+
+CREATE OR REPLACE FUNCTION Rmd_Step_1 () RETURNS VOID AS $$
+DECLARE
+
+/*********************************************************************************************************************/
+-- AUTHOR     -------- DATE        ------------- REMARKS ---------------------
+/*********************************************************************************************************************/
+-- AMYLIA            03-DEC-2008         TO RENAME ALL THE NEW TABLES FOR GLOBUS
+
+
+
+/*********************************************************************************************************************/
+
+	   TOTAL_RECORD INTEGER;
+	   COUNT_BD INTEGER;
+	   EXT_BUS_DATE DATE;
+	   NEXT_PROCESS_DATE DATE;
+   	   PRO_NAME        ADM_PROCESS_LOG.APL_PRO_NAME%TYPE;
+	   PRO_STATUS      ADM_PROCESS_LOG.APL_PRO_STATUS%TYPE;
+	   PRO_BUS_DATE    ADM_PROCESS_LOG.APL_PRO_BUS_DATE%TYPE;
+	   PRO_LOAD_STATUS ADM_PROCESS_LOG.APL_LOAD_STATUS%TYPE;
+	   PRO_SYSTEM_DATE ADM_PROCESS_LOG.APL_SYSTEM_DATE%TYPE;
+	   SYS_DATE DATE;
+BEGIN
+
+	 TRUNCATE TABLE ADM_SOURCE_INFO;
+
+	 TRUNCATE TABLE ADM_PROCESS_LOG;
+
+     /*CHECK ALL SOURCE FILES*/
+/******************************************************************************/
+	 /*CLS, LLS, IBU*/
+/******************************************************************************/
+     /*CLS*/
+	PERFORM Check_All_Bus_Date('CLSACCOUNT','CLS_ACCT_EXT2','DATE_EXTRACT','CLS');
+	PERFORM Check_All_Bus_Date('CLSCUSTOMER','CLS_CUST_EXT2','DATE_EXTRACT','CLS');
+	PERFORM Check_All_Bus_Date('CLSCOLLATERAL','CLS_COLL_EXT','DATE_EXTRACT','CLS');
+	PERFORM Check_All_Bus_Date('CLSFEES','CLS_FEES_EXT','DATE_EXTRACT','CLS');
+	PERFORM Check_All_Bus_Date('CLSLOAN','CLS_LOANS_EXT','DATE_EXTRACT','CLS');
+
+	 /*LLS*/
+	 PERFORM Check_All_Bus_Date('LLSACCOUNT','LLS_ACCT_EXT','DATE_EXTRACT','LLS');
+	 PERFORM Check_All_Bus_Date('LLSCUSTOMER','LLS_CUST_EXT','DATE_EXTRACT','LLS');
+	 PERFORM Check_All_Bus_Date('LLSCOLLATERAL','LLS_COLL_EXT','DATE_EXTRACT','LLS');
+	 PERFORM Check_All_Bus_Date('LLSFEES','LLS_FEES_EXT','DATE_EXTRACT','LLS');
+	 PERFORM Check_All_Bus_Date('LLSLOAN','LLS_LOANS_EXT','DATE_EXTRACT','LLS');
+
+	 /*IBU*/
+	 PERFORM Check_All_Bus_Date('IBUACCOUNT','IBU_ACCT_EXT','DATE_EXTRACT','IBU');
+	 PERFORM Check_All_Bus_Date('IBUCUSTOMER','IBU_CUST_EXT','DATE_EXTRACT','IBU');
+	 PERFORM Check_All_Bus_Date('IBUCOLLATERAL','IBU_COLL_EXT','DATE_EXTRACT','IBU');
+	 PERFORM Check_All_Bus_Date('IBUFEES','IBU_FEES_EXT','DATE_EXTRACT','IBU');
+	 PERFORM Check_All_Bus_Date('IBULOAN','IBU_LOANS_EXT','DATE_EXTRACT','IBU');
+
+
+/******************************************************************************/
+    /*GLOBUS (AMM)*/
+/******************************************************************************/
+	
+
+	 PERFORM Check_All_Bus_Date('GMCUS','GLO_CUST_NEW_EXT','BUS_DT','GLO');
+	 PERFORM Check_All_Bus_Date('GMMM','GLO_MM_NEW_EXT','BUSSINESS_DAT','GLO');
+	 PERFORM Check_All_Bus_Date('GMFX','GLO_FOREX_NEW_EXT', 'BUSINESS_DAT','GLO');
+	 PERFORM Check_All_Bus_Date('GMSTP', 'GLO_SC_TRD_POST_NEW_EXT', 'BUSINESS_DAT', 'GLO');
+	 PERFORM Check_All_Bus_Date('GMLIM', 'GLO_LIMIT_NEW_EXT', 'BUSSINESS_DAT', 'GLO');
+	 PERFORM Check_All_Bus_Date('GMCCY', 'GLO_CURRENCY_NEW_EXT', 'BUS_DATE', 'GLO');
+
+
+
+/******************************************************************************/
+  /*CRMS (AMM)*/
+/******************************************************************************/
+	 PERFORM Check_All_Bus_Date('RDMBENLMT_AMM', 'CRF_BEN_LIT_EXT', 'DOE', 'CRMS');
+	 PERFORM Check_All_Bus_Date('RDMBOND_AMM', 'CRF_BOND_EXP_EXT', 'DOE', 'CRMS');
+	 PERFORM Check_All_Bus_Date('RDMLOANX_AMM', 'CRF_LN_EXP_EXT', 'DOE', 'CRMS');
+	 PERFORM Check_All_Bus_Date('RDMUNRATED_AMM', 'CRF_UNR_EXP_EXT', 'DOE', 'CRMS');
+	 PERFORM Check_All_Bus_Date('RDMBENEF_AMM', 'CRF_BENEFACTOR_EXT', 'DOE', 'CRMS');
+
+/******************************************************************************/
+  /*CAD*/
+/******************************************************************************/
+	 PERFORM Check_All_Bus_Date('iis_cad_mis', 'CAD_IIS_EXT', 'DATE_EXTRACT', 'CAD_IIS');
+	 PERFORM Check_All_Bus_Date('limits', 'LIMITS_EXT', 'LIMIT_BUS_DATE', 'CAD_LIMIT');
+	 PERFORM Check_All_Bus_Date('rest_instrument', 'RESTRUCTURED_DEBT_CAD_EXT', 'EXTRACT_DT', 'CAD_REST');
+	 PERFORM Check_All_Bus_Date('public_holiday', 'PUBLIC_HOLIDAY_EXT', 'BUS_DATE', 'RMD');
+
+
+
+
+
+	 /*ADD ALL SOURCES SYSTEM*/
+
+	 /*GET SYSTEM DATE*/
+	SELECT CURRENT_DATE INTO SYS_DATE;
+
+	 /*GET NEXT PROCESSING_DATE*/
+	 SELECT CAST(LAST_PROCESSING_DATE AS DATE) + 1 INTO NEXT_PROCESS_DATE FROM ADM_ADMIN WHERE NEXT_PROCESSING_DATE IS NULL ;
+
+	 UPDATE ADM_SOURCE_INFO
+	 SET ASI_FILE_STATUS = 'TRUE',
+	 ASI_PRO_STATUS = 'TRUE'
+	 WHERE
+	 TRIM(ASI_COMMENT) = 'SOURCE FILE IS OK';
+
+	 UPDATE ADM_SOURCE_INFO
+	 SET ASI_FILE_STATUS = 'FALSE',
+	 ASI_PRO_STATUS = 'FALSE'
+	 WHERE
+	 TRIM(ASI_COMMENT) != 'SOURCE FILE IS OK';
+
+	 /*GET NUMBER OF RECORDS*/
+	 SELECT COUNT(DISTINCT ASI_COMMENT) INTO TOTAL_RECORD FROM ADM_SOURCE_INFO ;
+
+	 IF(TOTAL_RECORD = 1) THEN
+
+		 PRO_NAME:= 'CHECK BUSINESS DATE';
+		 PRO_BUS_DATE:= NEXT_PROCESS_DATE;
+		 PRO_STATUS := 'SUCCESS: CHECK BUSINESS DATE COMPLETED.';
+		 PRO_SYSTEM_DATE:= SYS_DATE;
+
+	 ELSE
+
+		 PRO_NAME:= 'CHECK BUSINESS DATE';
+		 PRO_BUS_DATE:= NEXT_PROCESS_DATE;
+		 PRO_STATUS := 'FAIL: BUSINESS DATE PROBLEM. PLEASE CHECK ADM_SOURCE_INFO';
+		 PRO_SYSTEM_DATE:= SYS_DATE;
+
+	 END IF;
+
+	 /*INSERT INTO ADM_PROCESS_LOG*/
+	 INSERT INTO ADM_PROCESS_LOG
+	 (APL_PRO_NAME, APL_PRO_STATUS, APL_PRO_BUS_DATE, APL_LOAD_STATUS, APL_SYSTEM_DATE)
+	 VALUES	(PRO_NAME, PRO_STATUS, PRO_BUS_DATE, PRO_LOAD_STATUS, PRO_SYSTEM_DATE);
+
+END ;
+$$
+LANGUAGE PLPGSQL;
+
