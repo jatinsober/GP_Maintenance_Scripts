@@ -1,0 +1,209 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 06-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE FUNCTION PIDM_6car (VAR_LAST_DAY IN DATE) RETURNS VOID AS $$
+      -- VAR_LAST_DAY DATE;
+      -- account with 6 active relationship
+DECLARE 
+car_rec record;
+cust_rec6 record;
+cust_rec7 record;
+cust_rec8 record;
+cust_rec9 record;
+cust_rec10 record;
+
+BEGIN
+       CREATE TEMP TABLE cur_6car_temp AS
+       SELECT CAR_R_ACCT_ID
+       FROM PIDM_CAR
+       WHERE (CAR_EXPIRATION_DT >= VAR_LAST_DAY OR CAR_EXPIRATION_DT = TO_DATE('01/01/0001','MM/DD/YYYY'))
+       GROUP BY CAR_R_ACCT_ID
+       HAVING COUNT(CAR_R_ACCT_ID) = 6;
+     -- account with 7 active relationship
+       CREATE TEMP TABLE cur_7car_temp AS
+       SELECT CAR_R_ACCT_ID
+       FROM PIDM_CAR
+       WHERE (CAR_EXPIRATION_DT >= VAR_LAST_DAY OR CAR_EXPIRATION_DT = TO_DATE('01/01/0001','MM/DD/YYYY'))
+       GROUP BY CAR_R_ACCT_ID
+       HAVING COUNT(CAR_R_ACCT_ID) = 7;
+     -- account with 8 active relationship
+       CREATE TEMP TABLE cur_8car_temp AS
+       SELECT CAR_R_ACCT_ID
+       FROM PIDM_CAR
+       WHERE (CAR_EXPIRATION_DT >= VAR_LAST_DAY OR CAR_EXPIRATION_DT = TO_DATE('01/01/0001','MM/DD/YYYY'))
+       GROUP BY CAR_R_ACCT_ID
+       HAVING COUNT(CAR_R_ACCT_ID) = 8;
+    -- account with 9 active relationship
+       CREATE TEMP TABLE cur_9car_temp AS
+       SELECT CAR_R_ACCT_ID
+       FROM PIDM_CAR
+       WHERE (CAR_EXPIRATION_DT >= VAR_LAST_DAY OR CAR_EXPIRATION_DT = TO_DATE('01/01/0001','MM/DD/YYYY'))
+       GROUP BY CAR_R_ACCT_ID
+       HAVING COUNT(CAR_R_ACCT_ID) = 9;
+    -- account with 10 active relationship
+       CREATE TEMP TABLE cur_10car_temp AS
+       SELECT CAR_R_ACCT_ID
+       FROM PIDM_CAR
+       WHERE (CAR_EXPIRATION_DT >= VAR_LAST_DAY OR CAR_EXPIRATION_DT = TO_DATE('01/01/0001','MM/DD/YYYY'))
+       GROUP BY CAR_R_ACCT_ID
+       HAVING COUNT(CAR_R_ACCT_ID) = 10;      
+ TRUNCATE TABLE PIDM_ABOVEFIVECUST;
+   
+ BEGIN
+    FOR car_rec IN (select * from cur_6car_temp) LOOP
+       FOR cust_rec6 IN (SELECT CAR_C_CIF_NO, car_r_acct_id
+           FROM PIDM_CAR
+           WHERE car_r_acct_id = car_rec.CAR_R_ACCT_ID
+           ORDER BY CAR_C_CIF_NO)
+       LOOP
+          UPDATE PIDM_ABOVEFIVECUST
+       SET   CIF_NO2 = cust_rec6.CAR_C_CIF_NO,
+             CIF_NO3 = CIF_NO2,
+             CIF_NO4 = CIF_NO3,
+             CIF_NO5 = CIF_NO4,
+             CIF_NO6 = CIF_NO5
+       WHERE car_r_acct_id = cust_rec6.car_r_acct_id;
+       IF SQL%NOTFOUND THEN
+       INSERT INTO PIDM_ABOVEFIVECUST(CAR_R_ACCT_ID,TYPE,CIF_NO1 )
+       VALUES
+       (cust_rec6.car_r_acct_id,'6 NAMES',cust_rec6.CAR_C_CIF_NO);
+       END IF;
+       
+       END LOOP;
+   END LOOP;
+   EXCEPTION
+     WHEN OTHERS
+     THEN
+  raise exception ' LOOP: -1 - error';
+ END;
+ BEGIN
+    FOR car_rec IN (select * from cur_7car_temp) LOOP
+       FOR cust_rec7 IN (SELECT CAR_C_CIF_NO, car_r_acct_id
+           FROM PIDM_CAR
+           WHERE car_r_acct_id = car_rec.CAR_R_ACCT_ID
+           ORDER BY CAR_C_CIF_NO)
+       LOOP
+          UPDATE PIDM_ABOVEFIVECUST
+       SET   CIF_NO2 = cust_rec7.CAR_C_CIF_NO,
+             CIF_NO3 = CIF_NO2,
+             CIF_NO4 = CIF_NO3,
+             CIF_NO5 = CIF_NO4,
+             CIF_NO6 = CIF_NO5,
+	     CIF_NO7 = CIF_NO6
+       WHERE car_r_acct_id = cust_rec7.car_r_acct_id;
+       IF SQL%NOTFOUND THEN
+       INSERT INTO PIDM_ABOVEFIVECUST(CAR_R_ACCT_ID,TYPE,CIF_NO1 )
+       VALUES
+       (cust_rec7.car_r_acct_id,'7 NAMES',cust_rec7.CAR_C_CIF_NO);
+       END IF;
+       
+       END LOOP;
+   END LOOP;
+   EXCEPTION
+     WHEN OTHERS
+     THEN
+  raise exception ' LOOP: -1 - error';
+ END;
+ BEGIN
+    FOR car_rec IN (select * from cur_8car_temp) LOOP
+       FOR cust_rec8 IN (SELECT CAR_C_CIF_NO, car_r_acct_id
+           FROM PIDM_CAR
+           WHERE car_r_acct_id = car_rec.CAR_R_ACCT_ID
+           ORDER BY CAR_C_CIF_NO)
+       LOOP
+          UPDATE PIDM_ABOVEFIVECUST
+       SET   CIF_NO2 = cust_rec8.CAR_C_CIF_NO,
+             CIF_NO3 = CIF_NO2,
+             CIF_NO4 = CIF_NO3,
+             CIF_NO5 = CIF_NO4,
+             CIF_NO6 = CIF_NO5,
+	     CIF_NO7 = CIF_NO6,
+             CIF_NO8 = CIF_NO7
+       WHERE car_r_acct_id = cust_rec8.car_r_acct_id;
+       IF SQL%NOTFOUND THEN
+       INSERT INTO PIDM_ABOVEFIVECUST(CAR_R_ACCT_ID,TYPE,CIF_NO1 )
+       VALUES
+       (cust_rec8.car_r_acct_id,'8 NAMES',cust_rec8.CAR_C_CIF_NO);
+       END IF;
+       
+       END LOOP;
+   END LOOP;
+   EXCEPTION
+     WHEN OTHERS
+     THEN
+  raise exception ' LOOP: -1 - error';
+ END;
+ BEGIN
+    FOR car_rec IN (select * from cur_9car_temp) LOOP
+       FOR cust_rec9 IN (SELECT CAR_C_CIF_NO, car_r_acct_id
+           FROM PIDM_CAR
+           WHERE car_r_acct_id = car_rec.CAR_R_ACCT_ID
+           ORDER BY CAR_C_CIF_NO)
+       LOOP
+          UPDATE PIDM_ABOVEFIVECUST
+       SET   CIF_NO2 = cust_rec9.CAR_C_CIF_NO,
+             CIF_NO3 = CIF_NO2,
+             CIF_NO4 = CIF_NO3,
+             CIF_NO5 = CIF_NO4,
+             CIF_NO6 = CIF_NO5,
+	     CIF_NO7 = CIF_NO6,
+             CIF_NO8 = CIF_NO7,
+             CIF_NO9 = CIF_NO8
+       WHERE car_r_acct_id = cust_rec9.car_r_acct_id;
+       IF SQL%NOTFOUND THEN
+       INSERT INTO PIDM_ABOVEFIVECUST(CAR_R_ACCT_ID,TYPE,CIF_NO1 )
+       VALUES
+       (cust_rec9.car_r_acct_id,'9 NAMES',cust_rec9.CAR_C_CIF_NO);
+       END IF;
+       
+       END LOOP;
+   END LOOP;
+   EXCEPTION
+     WHEN OTHERS
+     THEN
+  raise exception ' LOOP: -1 - error';
+ END;
+  BEGIN
+    FOR car_rec IN (select * from cur_10car_temp) LOOP
+       FOR cust_rec10 IN (SELECT CAR_C_CIF_NO, car_r_acct_id
+           FROM PIDM_CAR
+           WHERE car_r_acct_id = car_rec.CAR_R_ACCT_ID
+           ORDER BY CAR_C_CIF_NO)
+       LOOP
+          UPDATE PIDM_ABOVEFIVECUST
+       SET   CIF_NO2 = cust_rec10.CAR_C_CIF_NO,
+             CIF_NO3 = CIF_NO2,
+             CIF_NO4 = CIF_NO3,
+             CIF_NO5 = CIF_NO4,
+             CIF_NO6 = CIF_NO5,
+	         CIF_NO7 = CIF_NO6,
+             CIF_NO8 = CIF_NO7,
+             CIF_NO9 = CIF_NO8,
+             CIF_NO10 = CIF_NO9
+       WHERE car_r_acct_id = cust_rec10.car_r_acct_id;
+       IF SQL%NOTFOUND THEN
+       INSERT INTO PIDM_ABOVEFIVECUST(CAR_R_ACCT_ID,TYPE,CIF_NO1 )
+       VALUES
+       (cust_rec10.car_r_acct_id,'10 NAMES',cust_rec10.CAR_C_CIF_NO);
+       END IF;
+       
+       END LOOP;
+   END LOOP;
+   EXCEPTION
+     WHEN OTHERS
+     THEN
+  raise exception ' LOOP: -1 - error';
+ END;
+EXCEPTION
+   WHEN OTHERS
+   THEN
+       raise exception '-1 - error';
+END;
+$$
+LANGUAGE PLPGSQL;
+

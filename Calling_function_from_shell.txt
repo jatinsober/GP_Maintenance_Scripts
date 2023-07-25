@@ -1,0 +1,18 @@
+gpadmin@mdw PIDM_DIR]$ sh call.sh
+
+more call.sh 
+
+psql -c " set search_path to workarea;
+select * from Pidm_Spool_App1d();"
+cat /home/gpadmin/PIDM_DIR/PIDM_AMBANK_NONHDA_App1D_0.txt /home/gpadmin/PIDM_DIR/PIDM_AMBANK_NONHDA_App1D_1.txt /home/gpadmin/PIDM_DIR/PIDM_AMBANK_NONHDA_Ap
+p1D_2.txt > /home/gpadmin/PIDM_DIR/PIDM_AMBANK_NONHDA_App1D.txt
+
+
+OUTPUT : 
+gpadmin@mdw PIDM_DIR]$ more PIDM_AMBANK_NONHDA_App1D.txt
+
+1	Transaction Header App1D	  	FISS02	20110913	\N
+R_ORDER	ACCT_NO	CURRENCY	CUSTOMER_NAME	BENEFICIARY_NAME	BENEFICIARY_ID	BENEFICIARY_ADDR	BENEFICIARY_INSTREST
+Transaction Footer Count= 0
+
+

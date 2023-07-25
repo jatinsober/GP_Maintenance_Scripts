@@ -1,0 +1,43 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 26-AUG-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE FUNCTION is_numeric_patch (pStr VARCHAR)
+    --  local function that returns 'T' if the character string is numeric.
+    RETURNS VARCHAR AS $$
+DECLARE
+ vStr       VARCHAR(40) := LTRIM(RTRIM(pStr));
+ vChar      VARCHAR(1);
+ vStrLength NUMERIC;
+ vDecCount  NUMERIC := 0;
+  BEGIN
+ IF vStr IS NULL
+ THEN
+   RETURN 'N';
+ END IF;
+ vStrLength := LENGTH(vStr);
+ IF vStrLength = 0
+ THEN
+   RETURN '0';
+ END IF;
+ -- Look at each character to see if it's the decimal point or between '0' and '9''.
+ -- Only one decimal is allowed.
+ FOR vPos IN 1..vStrLength LOOP
+ 	 vChar := SUBSTR(vStr, vPos, 1);
+     IF NOT (vChar >= '0' AND vChar <= '9') AND not (vChar = '-')
+     THEN
+       RETURN 'F';
+     END IF;
+ END LOOP;
+ RETURN 'T';
+  EXCEPTION
+    WHEN OTHERS THEN
+   RETURN 'OH';
+  END;
+$$
+LANGUAGE PLPGSQL;
+

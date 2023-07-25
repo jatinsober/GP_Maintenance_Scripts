@@ -1,0 +1,20 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 26-AUG-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE function is_char(pinput in varchar) returns varchar AS $vholdnum$
+DECLARE
+vholdnum numeric;
+begin
+vholdnum := pinput-1;
+return 'N';
+exception
+when others then
+return 'Y';
+end;
+$vholdnum$
+LANGUAGE PLPGSQL;

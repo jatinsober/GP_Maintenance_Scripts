@@ -1,0 +1,29 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 26-AUG-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE function is_negative (pStr varchar)
+    --  local function that returns 'T' if the character string is negative.
+    returns varchar AS $$
+DECLARE
+ vStr       varchar(40) := ltrim(rtrim(pStr));
+ vChar      varchar(1);
+ vStrLength NUMERIC;
+ vDecCount  NUMERIC := 0;
+  begin
+ if vStr > 0
+ then
+   return vStr;
+ else
+   return '0';
+ end if;
+  exception
+    when others then
+   return 'F';
+  end;
+$$
+language plpgsql;

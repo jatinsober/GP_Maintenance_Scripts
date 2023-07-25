@@ -1,0 +1,55 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 06-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE FUNCTION PIDM_2car (VAR_LAST_DAY IN DATE) RETURNS VOID AS $$
+DECLARE     
+--VAR_LAST_DAY DATE;
+     -- account with 2 active relationship
+     
+BEGIN
+LOOP
+CREATE TEMP TABLE cur_2car_temp AS
+     SELECT CAR_R_ACCT_ID
+     FROM PIDM_CAR
+     WHERE (CAR_EXPIRATION_DT >= VAR_LAST_DAY OR CAR_EXPIRATION_DT = TO_DATE('01/01/0001','MM/DD/YYYY'))
+     GROUP BY CAR_R_ACCT_ID
+     HAVING COUNT(CAR_R_ACCT_ID) = 2;
+
+     TRUNCATE TABLE PIDM_TWOCUST;
+     BEGIN
+
+-- SELECT PIDM_CAR.CAR_C_CIF_NO, PIDM_CAR.car_r_acct_id into cust_rec                                                                                                --FROM PIDM_CAR,cur_2car_temp                                                                                                                                    --WHERE PIDM_CAR.car_r_acct_id = cur_2car_temp.CAR_R_ACCT_ID                                                                                                       --ORDER BY CAR_C_CIF_NO;
+
+create temp table cust_rec_temp as select PIDM_CAR.CAR_C_CIF_NO, PIDM_CAR.car_r_acct_id                                                                                                FROM PIDM_CAR,cur_2car_temp                                                                                                                                    WHERE PIDM_CAR.car_r_acct_id = cur_2car_temp.CAR_R_ACCT_ID                                                                                                       ORDER BY CAR_C_CIF_NO;
+                LOOP 
+               	 UPDATE PIDM_TWOCUST
+                 SET CIF_NO2 = cust_rec_temp.CAR_C_CIF_NO FROM cust_rec
+                 WHERE PIDM_TWOCUST.car_r_acct_id = cust_rec_temp.car_r_acct_id;
+                   
+IF NOT FOUND THEN
+
+INSERT INTO PIDM_TWOCUST select cust_rec_temp.car_r_acct_id,                                                                                               cust_rec_temp.CAR_C_CIF_NO,                                                                                                                                       NULL from cust_rec_temp;
+                   
+                   END IF;
+        END LOOP;         
+     EXCEPTION
+     WHEN OTHERS
+     THEN
+     RAISE NOTICE 'LOOP: -1 - error';
+     END;
+END LOOP;
+ EXCEPTION
+     WHEN OTHERS
+     THEN
+     RAISE NOTICE 'LOOP: -1 - error';
+
+
+END;
+$$
+LANGUAGE PLPGSQL;
+

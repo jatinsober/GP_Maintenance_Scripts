@@ -1,0 +1,67 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 06-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE FUNCTION PIDM_5car (VAR_LAST_DAY IN DATE) RETURNS VOID AS $$
+
+       --VAR_LAST_DAY DATE;
+
+      -- account with 5 active relationship
+BEGIN
+
+       CREATE TEMP TABLE cur_5car_temp AS
+       SELECT CAR_R_ACCT_ID
+       FROM PIDM_CAR
+       WHERE (CAR_EXPIRATION_DT >= VAR_LAST_DAY OR CAR_EXPIRATION_DT = TO_DATE('01/01/0001','MM/DD/YYYY'))
+       GROUP BY CAR_R_ACCT_ID
+       HAVING COUNT(CAR_R_ACCT_ID) = 5;
+       
+TRUNCATE TABLE PIDM_FIVECUST;
+
+
+ BEGIN
+--    FOR car_rec IN cur_5car 
+LOOP
+--       FOR cust_rec IN 
+CREATE TEMP TABLE cust_rec_temp AS SELECT PIDM_CAR.CAR_C_CIF_NO, PIDM_CAR.car_r_acct_id
+           FROM PIDM_CAR,cur_5car_temp
+           WHERE PIDM_CAR.car_r_acct_id = cur_5car_temp.CAR_R_ACCT_ID
+           ORDER BY CAR_C_CIF_NO;
+       LOOP
+          UPDATE PIDM_FIVECUST
+       SET   CIF_NO2 = cust_rec_temp.CAR_C_CIF_NO,
+             CIF_NO3 = CIF_NO2,
+             CIF_NO4 = CIF_NO3,
+             CIF_NO5 = CIF_NO4 FROM cust_rec_temp
+       WHERE PIDM_FIVECUST.car_r_acct_id = cust_rec_temp.car_r_acct_id;
+
+       IF NOT FOUND THEN
+       INSERT INTO PIDM_FIVECUST VALUES
+       (
+       cust_rec_temp.car_r_acct_id,
+       cust_rec_temp.CAR_C_CIF_NO,
+       NULL,
+       NULL,
+       NULL,
+       NULL
+       );
+       END IF;
+       COMMIT;
+       END LOOP;
+   END LOOP;
+   EXCEPTION
+     WHEN OTHERS
+     THEN
+   RAISE NOTICE 'LOOP: -1 - error';
+ END;
+EXCEPTION
+   WHEN OTHERS
+   THEN
+      RAISE NOTICE 'LOOP: -1 - error';
+END;
+$$
+LANGUAGE PLPGSQL;

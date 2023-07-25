@@ -1,0 +1,81 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 20-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO DWACC;
+
+CREATE OR REPLACE FUNCTION DCS_MERGED_W_FixedLength () RETURNS VOID AS $body$
+DECLARE
+FILE1 TEXT;
+FILE2 TEXT;
+
+BEGIN
+BEGIN 
+
+
+FILE1 := $$/home/gpadmin/OUTPUT_DIR/DCSMERGEDORG$$ ||'.txt';
+
+CREATE TEMP TABLE MCD_OUTPUT_F1
+(R_ORDER NUMERIC ,COL_1 VARCHAR);
+
+INSERT INTO MCD_OUTPUT_F1 (R_ORDER,COL_1)  SELECT 1,RPAD(TRIM(DCS_CAR_PRIMARY_ID)||' ',40)||
+                   RPAD(TRIM(DCS_ACCT_RM_CODE)||' ',5)||
+			       RPAD(TRIM(DCS_CAR_R_CUS_CIF_NO)||' ',29)||
+				   RPAD(TRIM(DCS_CAR_REL_TYP_CD)||' ',4)||
+			       RPAD(TRIM(DCS_ACCT_IMS_NO)||' ',40)||
+			       RPAD(TRIM(DCS_DEPART_CD)||' ',3)||
+			       RPAD(TRIM(DCS_ACCT_CUR_BAL_IMS)||' ',18)||
+			       RPAD(TRIM(DCS_ACCT_OVERDUE_AMT)||' ',18)||
+                   RPAD(TRIM(DCS_IIS_OTHER_CHRG)||' ',18)||
+			       RPAD(TRIM(DCS_CK_OD_COMM_FEE)||' ',17)||
+			       RPAD(TRIM(DCS_IIS_SUSP_AMT)||' ',18)||
+			       RPAD(TRIM(DCS_IIS_S_CHARGED)||' ',18)||
+                   RPAD(TRIM(DCS_ACCT_STS_NO)||' ',40)||
+			       RPAD(TRIM(DCS_ACCT_CUR_BAL_STS)||' ',18)||
+			       RPAD(TRIM(DCS_RS_TOT_INT_PAID)||' ',18)||
+			       RPAD(TRIM(DCS_MERGED_CODE)||' ',5) FROM DCS_MERGED_ORG_TGT ORDER BY DCS_CAR_PRIMARY_ID,DCS_ACCT_APPL_SYS_ID;
+  
+EXECUTE 'copy (select r_order,col_1 from MCD_OUTPUT_F1 order by R_ORDER) to  ''' || FILE1 || ''';';
+ 
+END;
+BEGIN 
+
+FILE2 := $$/home/gpadmin/OUTPUT_DIR/DCSMERGEDIND_2A$$ ||'.txt';
+
+CREATE TEMP TABLE MCD_OUTPUT_F2
+(R_ORDER NUMERIC ,COL_1 VARCHAR);
+
+  
+	INSERT INTO MCD_OUTPUT_F1 (R_ORDER,COL_1)  SELECT 1,RPAD(TRIM(DCS_CAR_PRIMARY_ID)||' ',40)||
+                   RPAD(TRIM(DCS_ACCT_RM_CODE)||' ',5)||
+			       RPAD(TRIM(DCS_CAR_R_CUS_CIF_NO)||' ',29)||
+				   RPAD(TRIM(DCS_CAR_REL_TYP_CD)||' ',4)||
+			       RPAD(TRIM(DCS_ACCT_IMS_NO)||' ',40)||
+			       RPAD(TRIM(DCS_DEPART_CD)||' ',3)||
+			       RPAD(TRIM(DCS_ACCT_CUR_BAL_IMS)||' ',18)||
+			       RPAD(TRIM(DCS_ACCT_OVERDUE_AMT)||' ',18)||
+                   RPAD(TRIM(DCS_IIS_OTHER_CHRG)||' ',18)||
+			       RPAD(TRIM(DCS_CK_OD_COMM_FEE)||' ',17)||
+			       RPAD(TRIM(DCS_IIS_SUSP_AMT)||' ',18)||
+			       RPAD(TRIM(DCS_IIS_S_CHARGED)||' ',18)||
+                   RPAD(TRIM(DCS_ACCT_STS_NO)||' ',40)||
+			       RPAD(TRIM(DCS_ACCT_CUR_BAL_STS)||' ',18)||
+			       RPAD(TRIM(DCS_RS_TOT_INT_PAID)||' ',18)||
+			       RPAD(TRIM(DCS_MERGED_CODE)||' ',5) FROM DCS_MERGED_IND_2A   
+                ORDER BY DCS_CAR_PRIMARY_ID,DCS_ACCT_APPL_SYS_ID;
+
+  
+EXECUTE 'copy (select r_order,col_1 from MCD_OUTPUT_F2 order by R_ORDER) to  ''' || FILE2 || ''';';
+
+END;  
+
+END ;
+$body$
+LANGUAGE PLPGSQL;
+
+
+
+
+

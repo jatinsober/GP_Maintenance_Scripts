@@ -1,0 +1,62 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 26-AUG-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE FUNCTION is_numeric (pStr VARCHAR) 
+    --  local function that returns 'T' if the character string is numeric.
+    RETURNS VARCHAR AS $$
+DECLARE 
+vStr       VARCHAR(40) := LTRIM(RTRIM(pStr));
+ vChar      VARCHAR(1);
+ vStrLength NUMERIC;
+ vDecCount  NUMERIC := 0;
+  BEGIN
+ IF vStr IS NULL
+ THEN
+   RETURN 'F';
+ END IF;
+ vStrLength := LENGTH(vStr);
+ IF vStrLength = 0
+ THEN
+   RETURN 'F';
+ END IF;
+ -- Check for the negative sign.  If it's there, shift it off.
+ IF SUBSTR(vStr, 1, 1) = '-'
+ THEN
+   vStr := SUBSTR(vStr, 2, vStrLength);
+   IF vStr = ''
+   THEN
+     RETURN 'F';
+   END IF;
+   vStrLength := vStrLength - 1;
+ END IF;
+ -- Look at each character to see if it's the decimal point or between '0' and '9''.
+ -- Only one decimal is allowed.
+ FOR vPos IN 1..vStrLength LOOP
+   vChar := SUBSTR(vStr, vPos, 1);
+   IF vChar = '.'
+   THEN
+     vDecCount := vDecCount + 1;
+  IF vDecCount > 1
+  THEN
+    RETURN 'F';
+  END IF;
+   ELSE
+     IF NOT (vChar >= '0' AND vChar <= '9')
+     THEN
+       RETURN 'F';
+     END IF;
+   END IF;
+ END LOOP;
+ RETURN 'T';
+  EXCEPTION
+    WHEN OTHERS THEN
+   RETURN 'F';
+  END;
+$$
+LANGUAGE PLPGSQL;
+

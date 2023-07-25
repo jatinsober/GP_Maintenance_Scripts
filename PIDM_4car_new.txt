@@ -1,0 +1,68 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 06-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE FUNCTION PIDM_4car (VAR_LAST_DAY IN DATE) RETURNS VOID AS $$
+
+ -- VAR_LAST_DAY DATE;
+
+     -- account with 4 active relationship
+  DECLARE
+car_rec record;
+cust_rec record;   
+
+BEGIN
+CREATE TEMP TABLE cur_4car_temp AS
+     SELECT CAR_R_ACCT_ID
+     FROM PIDM_CAR
+     WHERE (CAR_EXPIRATION_DT >= VAR_LAST_DAY OR CAR_EXPIRATION_DT = TO_DATE('01/01/0001','MM/DD/YYYY'))
+     GROUP BY CAR_R_ACCT_ID
+     HAVING COUNT(CAR_R_ACCT_ID) = 4;
+TRUNCATE TABLE PIDM_FOURCUST;
+
+BEGIN
+  FOR car_rec IN (select * from cur_4car_temp) LOOP
+       FOR cust_rec IN (SELECT CAR_C_CIF_NO, car_r_acct_id
+           FROM PIDM_CAR
+           WHERE car_r_acct_id = car_rec.CAR_R_ACCT_ID
+           ORDER BY CAR_C_CIF_NO)
+      LOOP
+           UPDATE PIDM_FOURCUST
+        SET   CIF_NO2 = cust_rec.CAR_C_CIF_NO,
+                   CIF_NO3 = CIF_NO2,
+                 CIF_NO4 = CIF_NO3
+           WHERE car_r_acct_id = cust_rec.car_r_acct_id;
+
+            IF SQL%NOTFOUND THEN
+            INSERT INTO PIDM_FOURCUST VALUES
+            ( cust_rec.car_r_acct_id,
+              cust_rec.CAR_C_CIF_NO,
+              NULL,
+              NULL,
+              NULL
+            );
+            END IF;
+         
+         END LOOP;
+      END LOOP;
+
+      EXCEPTION
+          WHEN OTHERS
+          THEN
+         raise exception ' LOOP: -1 - error';
+      END;
+
+EXCEPTION
+   WHEN OTHERS
+   THEN
+      raise exception '-1 - error';
+
+END;
+$$
+LANGUAGE PLPGSQL;
+
+

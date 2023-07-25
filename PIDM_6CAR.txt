@@ -1,0 +1,51 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 06-SEP-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE FUNCTION PIDM_6CAR (VAR_LAST_DAY IN DATE) RETURNS VOID AS $$
+     
+ BEGIN
+    --FOR car_rec IN cur_6car 
+ -- account with 6 active relationship
+       CREATE TEMP TABLE cur_6car_temp AS
+       SELECT CAR_R_ACCT_ID
+       FROM PIDM_CAR
+       WHERE (CAR_EXPIRATION_DT >= VAR_LAST_DAY OR CAR_EXPIRATION_DT = TO_DATE('01/01/0001','MM/DD/YYYY'))
+       GROUP BY CAR_R_ACCT_ID
+       HAVING COUNT(CAR_R_ACCT_ID) = 6;
+
+       --FOR cust_rec6_temp IN 
+CREATE TEMP TABLE cust_rec6_temp AS SELECT PIDM_CAR.CAR_C_CIF_NO, PIDM_CAR.car_r_acct_id
+           FROM PIDM_CAR,cur_6car_temp
+           WHERE PIDM_CAR.car_r_acct_id = cur_6car_temp.CAR_R_ACCT_ID
+           ORDER BY CAR_C_CIF_NO;
+
+  
+  TRUNCATE TABLE PIDM_ABOVEFIVECUST;
+      
+
+          UPDATE PIDM_ABOVEFIVECUST
+       SET   CIF_NO2 = cust_rec6_temp.CAR_C_CIF_NO,
+             CIF_NO3 = CIF_NO2,
+             CIF_NO4 = CIF_NO3,
+             CIF_NO5 = CIF_NO4,
+             CIF_NO6 = CIF_NO5 FROM cust_rec6_temp
+       WHERE PIDM_ABOVEFIVECUST.car_r_acct_id = cust_rec6_temp.car_r_acct_id;
+       
+--IF NOT FOUND THEN  
+     INSERT INTO PIDM_ABOVEFIVECUST(CAR_R_ACCT_ID,TYPE,CIF_NO1 )
+       SELECT
+       cust_rec6_temp.car_r_acct_id,'6 NAMES',cust_rec6_temp.CAR_C_CIF_NO FROM cust_rec6_temp;
+       END IF;
+       
+       END LOOP;
+   
+EXCEPTIONS
+WHEN NO_DATA_FOUND THEN '-1 - error';
+END;
+$$
+LANGUAGE PLPGSQL;

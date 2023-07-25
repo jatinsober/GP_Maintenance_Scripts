@@ -1,0 +1,30 @@
+------
+--DEV BY : Jitendra Lodwal  
+--DATE  : 26-AUG-2011 
+--DESC : FUNCTION
+------
+
+SET SEARCH_PATH TO WORKAREA;
+
+CREATE OR REPLACE function is_positive (pStr VARCHAR)
+    --  local function that returns 'T' if the character string is negative.
+    returns VARCHAR AS $$
+DECLARE
+ vStr       VARCHAR(40) := ltrim(rtrim(pStr));
+ vChar      VARCHAR(1);
+ vStrLength NUMERIC;
+ vDecCount  NUMERIC := 0;
+  begin
+ if vStr > 0
+ then
+   return 'T';
+ else
+   return 'F';
+ end if;
+  exception
+    when others then
+   return 'F';
+  end;
+$$
+LANGUAGE PLPGSQL;
+
